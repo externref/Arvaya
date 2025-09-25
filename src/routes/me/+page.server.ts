@@ -112,5 +112,73 @@ export const actions = {
 		return {
 			success: true
 		};
+	},
+
+	// Server actions for testing activity metrics (would normally be automatic)
+	incrementBlogs: async ({ locals: { supabase, safeGetSession } }) => {
+		const { session, user } = await safeGetSession();
+		if (!session || !user) {
+			return fail(401, { error: 'Not authenticated' });
+		}
+
+		const { error } = await supabase.rpc('increment_blog_count', { user_id: user.id });
+		if (error) {
+			console.error('Error incrementing blog count:', error);
+			return fail(500, { error: 'Failed to update blog count' });
+		}
+
+		return { success: true, message: 'Blog count incremented!' };
+	},
+
+	incrementPlaces: async ({ locals: { supabase, safeGetSession } }) => {
+		const { session, user } = await safeGetSession();
+		if (!session || !user) {
+			return fail(401, { error: 'Not authenticated' });
+		}
+
+		const { error } = await supabase.rpc('increment_places_explored', { user_id: user.id });
+		if (error) {
+			console.error('Error incrementing places explored:', error);
+			return fail(500, { error: 'Failed to update places explored' });
+		}
+
+		return { success: true, message: 'Places explored incremented!' };
+	},
+
+	incrementEndorsements: async ({ locals: { supabase, safeGetSession } }) => {
+		const { session, user } = await safeGetSession();
+		if (!session || !user) {
+			return fail(401, { error: 'Not authenticated' });
+		}
+
+		const { error } = await supabase.rpc('increment_endorsements', { user_id: user.id });
+		if (error) {
+			console.error('Error incrementing endorsements:', error);
+			return fail(500, { error: 'Failed to update endorsements' });
+		}
+
+		return { success: true, message: 'Endorsements incremented!' };
+	},
+
+	addActivityPoints: async ({ request, locals: { supabase, safeGetSession } }) => {
+		const { session, user } = await safeGetSession();
+		if (!session || !user) {
+			return fail(401, { error: 'Not authenticated' });
+		}
+
+		const formData = await request.formData();
+		const points = parseInt(formData.get('points') as string) || 10;
+
+		const { error } = await supabase.rpc('add_activity_points', {
+			user_id: user.id,
+			points_to_add: points
+		});
+
+		if (error) {
+			console.error('Error adding activity points:', error);
+			return fail(500, { error: 'Failed to add activity points' });
+		}
+
+		return { success: true, message: `Added ${points} activity points!` };
 	}
 };

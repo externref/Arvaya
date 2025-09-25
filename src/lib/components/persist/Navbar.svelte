@@ -6,7 +6,7 @@
 	import { page } from '$app/stores';
 	import { enhance } from '$app/forms';
 
-	let { session, user } = $derived($page.data);
+	let { session, user, profile } = $derived($page.data);
 </script>
 
 <nav class="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -37,6 +37,12 @@
 					<span class="text-sm text-muted-foreground">
 						Welcome, {user.user_metadata?.full_name || user.email}
 					</span>
+					{#if profile?.username}
+						<Button href="/profile/{profile.username}" variant="ghost" size="sm" class="h-9 px-3">
+							My Profile
+						</Button>
+					{/if}
+					<Button href="/dashboard" variant="ghost" size="sm" class="h-9 px-3">Dashboard</Button>
 					<form method="POST" action="/auth?/logout" use:enhance>
 						<Button type="submit" variant="outline" size="sm" class="h-9 px-3">Sign Out</Button>
 					</form>

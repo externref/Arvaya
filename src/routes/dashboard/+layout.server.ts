@@ -8,8 +8,20 @@ export const load = async ({ locals: { supabase, safeGetSession } }) => {
 		redirect(303, '/auth');
 	}
 
+	// Get user profile data to access username
+	let profile = null;
+	if (user) {
+		const { data } = await supabase
+			.from('profiles')
+			.select('username, full_name')
+			.eq('id', user.id)
+			.single();
+		profile = data;
+	}
+
 	return {
 		session,
-		user
+		user,
+		profile
 	};
 };

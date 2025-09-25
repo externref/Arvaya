@@ -55,7 +55,10 @@
 
 	// Tags management
 	let tagInput = $state('');
-	let currentTags = $state(profile?.tags ? profile.tags.split(',').filter((t) => t.trim()) : []);
+	// svelte-ignore state_referenced_locally
+	let currentTags = $state(
+		profile?.tags ? profile.tags.split(',').filter((t: string) => t.trim()) : []
+	);
 
 	function addTag() {
 		if (tagInput.trim() && !currentTags.includes(tagInput.trim())) {
@@ -65,7 +68,7 @@
 	}
 
 	function removeTag(tag: string) {
-		currentTags = currentTags.filter((t) => t !== tag);
+		currentTags = currentTags.filter((t: string) => t !== tag);
 	}
 
 	function handleKeyPress(event: KeyboardEvent) {
@@ -266,5 +269,59 @@
 				<p class="text-green-700 dark:text-green-300">Profile updated successfully!</p>
 			</div>
 		{/if}
+
+		<!-- Activity Metrics Display -->
+		<Card.Root class="mt-8">
+			<Card.Header>
+				<Card.Title class="flex items-center gap-2">⭐ Activity Metrics</Card.Title>
+				<Card.Description>
+					Your current activity stats (these would normally be updated automatically)
+				</Card.Description>
+			</Card.Header>
+			<Card.Content>
+				<div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+					<div class="text-center">
+						<div class="text-2xl font-bold text-blue-600">{profile?.blog_count || 0}</div>
+						<div class="text-sm text-muted-foreground">Blogs</div>
+						<form method="post" action="?/incrementBlogs" use:enhance class="mt-2">
+							<Button type="submit" size="sm" variant="outline" class="h-8 text-xs">+1 Blog</Button>
+						</form>
+					</div>
+					<div class="text-center">
+						<div class="text-2xl font-bold text-orange-600">{profile?.places_explored || 0}</div>
+						<div class="text-sm text-muted-foreground">Places</div>
+						<form method="post" action="?/incrementPlaces" use:enhance class="mt-2">
+							<Button type="submit" size="sm" variant="outline" class="h-8 text-xs">+1 Place</Button
+							>
+						</form>
+					</div>
+					<div class="text-center">
+						<div class="text-2xl font-bold text-green-600">{profile?.endorsements || 0}</div>
+						<div class="text-sm text-muted-foreground">Endorsements</div>
+						<form method="post" action="?/incrementEndorsements" use:enhance class="mt-2">
+							<Button type="submit" size="sm" variant="outline" class="h-8 text-xs"
+								>+1 Endorse</Button
+							>
+						</form>
+					</div>
+					<div class="text-center">
+						<div class="text-2xl font-bold text-purple-600">{profile?.activity_points || 0}</div>
+						<div class="text-sm text-muted-foreground">Points</div>
+						<form method="post" action="?/addActivityPoints" use:enhance class="mt-2">
+							<input type="hidden" name="points" value="10" />
+							<Button type="submit" size="sm" variant="outline" class="h-8 text-xs"
+								>+10 Points</Button
+							>
+						</form>
+					</div>
+				</div>
+				<div class="mt-4 text-center text-xs text-muted-foreground">
+					<p>
+						Testing buttons - in production, these would be updated automatically when you perform
+						activities.
+					</p>
+				</div>
+			</Card.Content>
+		</Card.Root>
 	</div>
 </div>

@@ -11,11 +11,12 @@
 		Settings,
 		Globe,
 		PenTool,
-		UserCog
+		UserCog,
+		User
 	} from 'lucide-svelte';
 
 	let { data } = $props();
-	let { session, user } = $derived(data);
+	let { session, user, profile } = $derived(data);
 </script>
 
 <svelte:head>
@@ -36,6 +37,17 @@
 			<p class="text-lg text-muted-foreground">
 				Continue your journey through India's rich cultural heritage
 			</p>
+			{#if profile?.username}
+				<div class="mt-4">
+					<a
+						href="/profile/{profile.username}"
+						class="inline-flex items-center gap-2 text-sm text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300"
+					>
+						<User class="h-4 w-4" />
+						View My Public Profile
+					</a>
+				</div>
+			{/if}
 		</div>
 
 		<!-- Quick Options -->
