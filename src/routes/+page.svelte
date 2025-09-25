@@ -28,9 +28,9 @@
 				<!-- Hero Content -->
 				<div class="space-y-8">
 					<div class="space-y-2">
-						<Badge variant="secondary" class="mb-4">Smart India Hackathon 2025</Badge>
+						<Badge variant="secondary" class="mb-4">🏛️ Heritage Explorer</Badge>
 						<h1 class="text-4xl leading-tight font-bold text-foreground md:text-6xl">
-							Exploring India's
+							Discover India's
 							<span
 								class="bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent"
 							>
@@ -38,8 +38,7 @@
 							</span>
 						</h1>
 						<p class="max-w-lg text-xl text-muted-foreground">
-							Interactive map and timeline to discover India's vast, distributed cultural legacy in
-							one dynamic, visual platform.
+							Journey through centuries of rich cultural traditions, historical monuments, and living heritage sites across the Indian subcontinent.
 						</p>
 					</div>
 
@@ -74,15 +73,15 @@
 					<div class="flex items-center gap-8 text-sm text-muted-foreground">
 						<div class="flex items-center gap-2">
 							<div class="h-2 w-2 rounded-full bg-green-500"></div>
-							<span>Interactive Experience</span>
+							<span>Expert Curated</span>
 						</div>
 						<div class="flex items-center gap-2">
 							<div class="h-2 w-2 rounded-full bg-blue-500"></div>
-							<span>AI-Powered Discovery</span>
+							<span>Immersive Learning</span>
 						</div>
 						<div class="flex items-center gap-2">
 							<div class="h-2 w-2 rounded-full bg-purple-500"></div>
-							<span>Community Driven</span>
+							<span>Cultural Preservation</span>
 						</div>
 					</div>
 				</div>
@@ -133,10 +132,9 @@
 	<section class="px-4 py-20">
 		<div class="container mx-auto max-w-7xl">
 			<div class="mb-16 text-center">
-				<h2 class="mb-4 text-3xl font-bold md:text-4xl">Proposed Solution</h2>
+				<h2 class="mb-4 text-3xl font-bold md:text-4xl">Explore Heritage Like Never Before</h2>
 				<p class="mx-auto max-w-3xl text-xl text-muted-foreground">
-					An innovative approach to centralizing and exploring India's rich cultural heritage
-					through modern technology
+					Experience India's rich cultural tapestry through immersive digital experiences, connecting past and present in meaningful ways
 				</p>
 			</div>
 
@@ -151,30 +149,30 @@
 						>
 							<Map class="h-6 w-6 text-orange-600" />
 						</div>
-						<Card.Title>Interactive Map + Timeline</Card.Title>
+						<Card.Title>Heritage Mapping</Card.Title>
 						<Card.Description>
-							Explore India's heritage across space and time with an intuitive map interface
+							Navigate through India's cultural landscape with our comprehensive heritage mapping system
 						</Card.Description>
 					</Card.Header>
 					<Card.Content>
 						<ul class="space-y-2 text-sm text-muted-foreground">
 							<li class="flex items-center gap-2">
 								<div class="h-1.5 w-1.5 rounded-full bg-orange-500"></div>
-								Scroll through eras with key sites highlighted
+								Explore UNESCO World Heritage Sites
 							</li>
 							<li class="flex items-center gap-2">
 								<div class="h-1.5 w-1.5 rounded-full bg-orange-500"></div>
-								Click markers for historical data & visuals
+								Discover hidden architectural gems
 							</li>
 							<li class="flex items-center gap-2">
 								<div class="h-1.5 w-1.5 rounded-full bg-orange-500"></div>
-								3D views and immersive experiences
+								Virtual tours and 360° experiences
 							</li>
 						</ul>
 					</Card.Content>
 				</Card.Root>
 
-				<!-- AI Recommendations -->
+				<!-- Personalized Discovery -->
 				<Card.Root
 					class="group border-2 transition-all duration-300 hover:border-blue-200 hover:shadow-xl"
 				>
@@ -184,30 +182,30 @@
 						>
 							<Sparkles class="h-6 w-6 text-blue-600" />
 						</div>
-						<Card.Title>AI-Powered Recommendations</Card.Title>
+						<Card.Title>Personalized Discovery</Card.Title>
 						<Card.Description>
-							Personalized discovery based on your interests and learning preferences
+							Curated heritage experiences tailored to your cultural interests and preferences
 						</Card.Description>
 					</Card.Header>
 					<Card.Content>
 						<ul class="space-y-2 text-sm text-muted-foreground">
 							<li class="flex items-center gap-2">
 								<div class="h-1.5 w-1.5 rounded-full bg-blue-500"></div>
-								Smart content suggestions
+								Curated heritage collections
 							</li>
 							<li class="flex items-center gap-2">
 								<div class="h-1.5 w-1.5 rounded-full bg-blue-500"></div>
-								Adaptive learning paths
+								Customized cultural journeys
 							</li>
 							<li class="flex items-center gap-2">
 								<div class="h-1.5 w-1.5 rounded-full bg-blue-500"></div>
-								Cultural connection insights
+								Expert-guided cultural insights
 							</li>
 						</ul>
 					</Card.Content>
 				</Card.Root>
 
-				<!-- Community Features -->
+				<!-- Heritage Community -->
 				<Card.Root
 					class="group border-2 transition-all duration-300 hover:border-purple-200 hover:shadow-xl"
 				>
@@ -217,24 +215,24 @@
 						>
 							<Users class="h-6 w-6 text-purple-600" />
 						</div>
-						<Card.Title>Community Engagement</Card.Title>
+						<Card.Title>Heritage Community</Card.Title>
 						<Card.Description>
-							Empower users to contribute stories, insights, and preserve cultural knowledge
+							Connect with fellow heritage enthusiasts, scholars, and cultural preservationists
 						</Card.Description>
 					</Card.Header>
 					<Card.Content>
 						<ul class="space-y-2 text-sm text-muted-foreground">
 							<li class="flex items-center gap-2">
 								<div class="h-1.5 w-1.5 rounded-full bg-purple-500"></div>
-								Share cultural stories & insights
+								Connect with heritage experts
 							</li>
 							<li class="flex items-center gap-2">
 								<div class="h-1.5 w-1.5 rounded-full bg-purple-500"></div>
-								Digital preservation efforts
+								Share cultural discoveries
 							</li>
 							<li class="flex items-center gap-2">
 								<div class="h-1.5 w-1.5 rounded-full bg-purple-500"></div>
-								Collaborative storytelling
+								Preserve family heritage stories
 							</li>
 						</ul>
 					</Card.Content>
@@ -243,77 +241,72 @@
 		</div>
 	</section>
 
-	<!-- Problem & Solution Section -->
+	<!-- Why Choose Arvaya Section -->
 	<section class="bg-muted/50 px-4 py-20">
 		<div class="container mx-auto max-w-7xl">
 			<div class="grid gap-16 lg:grid-cols-2">
-				<!-- Problem -->
+				<!-- Mission -->
 				<div class="space-y-6">
-					<h2 class="text-3xl font-bold text-red-600">Addressing Problem</h2>
+					<h2 class="text-3xl font-bold text-orange-600">Our Mission</h2>
 					<div class="space-y-4">
 						<div class="flex gap-4">
-							<div class="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-red-500"></div>
+							<div class="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-orange-500"></div>
 							<div>
-								<h3 class="mb-2 font-semibold">Centralized Cultural Legacy</h3>
+								<h3 class="mb-2 font-semibold">Preserve Cultural Legacy</h3>
 								<p class="text-muted-foreground">
-									India's vast, distributed cultural heritage needs a unified, dynamic visual
-									platform for easy exploration.
+									Safeguarding India's rich cultural heritage for future generations through digital preservation and storytelling.
 								</p>
 							</div>
 						</div>
 						<div class="flex gap-4">
-							<div class="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-red-500"></div>
+							<div class="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-orange-500"></div>
 							<div>
-								<h3 class="mb-2 font-semibold">Timeline Perspective</h3>
+								<h3 class="mb-2 font-semibold">Educational Impact</h3>
 								<p class="text-muted-foreground">
-									Need for easy grasp of history & evolution through interactive timeline views.
+									Making heritage education accessible, engaging, and meaningful for learners of all ages and backgrounds.
 								</p>
 							</div>
 						</div>
 						<div class="flex gap-4">
-							<div class="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-red-500"></div>
+							<div class="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-orange-500"></div>
 							<div>
-								<h3 class="mb-2 font-semibold">Engaging Learning</h3>
+								<h3 class="mb-2 font-semibold">Cultural Connection</h3>
 								<p class="text-muted-foreground">
-									Transform passive learning into engaging experiences via multimedia, 3D, and AI
-									suggestions.
+									Bridging the gap between past and present, helping people connect with their cultural roots.
 								</p>
 							</div>
 						</div>
 					</div>
 				</div>
 
-				<!-- Innovation -->
+				<!-- What Makes Us Different -->
 				<div class="space-y-6">
-					<h2 class="text-3xl font-bold text-green-600">Innovation & Uniqueness</h2>
+					<h2 class="text-3xl font-bold text-blue-600">What Makes Us Different</h2>
 					<div class="space-y-4">
 						<div class="flex gap-4">
-							<div class="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-green-500"></div>
+							<div class="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-blue-500"></div>
 							<div>
-								<h3 class="mb-2 font-semibold">Space-Time Exploration</h3>
+								<h3 class="mb-2 font-semibold">Immersive Experiences</h3>
 								<p class="text-muted-foreground">
-									Interactive map with timeline - explore India's heritage across both space and
-									time dimensions.
+									Virtual reality tours, 3D reconstructions, and interactive timelines bring heritage sites to life.
 								</p>
 							</div>
 						</div>
 						<div class="flex gap-4">
-							<div class="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-green-500"></div>
+							<div class="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-blue-500"></div>
 							<div>
-								<h3 class="mb-2 font-semibold">Community Empowerment</h3>
+								<h3 class="mb-2 font-semibold">Expert Curation</h3>
 								<p class="text-muted-foreground">
-									Enable community blogging for sharing stories & insights, not just passive
-									viewing.
+									Content curated by historians, archaeologists, and cultural experts ensuring accuracy and depth.
 								</p>
 							</div>
 						</div>
 						<div class="flex gap-4">
-							<div class="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-green-500"></div>
+							<div class="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-blue-500"></div>
 							<div>
-								<h3 class="mb-2 font-semibold">Digital Preservation</h3>
+								<h3 class="mb-2 font-semibold">Living Heritage</h3>
 								<p class="text-muted-foreground">
-									Participate in digital preservation and storytelling, creating a living heritage
-									archive.
+									Dynamic platform where heritage lives and grows through community contributions and discoveries.
 								</p>
 							</div>
 						</div>
@@ -328,27 +321,27 @@
 		<div class="container mx-auto max-w-4xl text-center">
 			<div class="space-y-8">
 				<div class="space-y-4">
-					<h2 class="text-3xl font-bold md:text-4xl">Ready to Explore India's Heritage?</h2>
+					<h2 class="text-3xl font-bold md:text-4xl">Begin Your Cultural Journey Today</h2>
 					<p class="mx-auto max-w-2xl text-xl opacity-90">
-						Join thousands of heritage enthusiasts in discovering, learning, and preserving India's
-						rich cultural legacy.
+						Join a growing community of heritage enthusiasts, scholars, and cultural explorers in preserving and celebrating India's incredible legacy.
 					</p>
 				</div>
 
 				<div class="flex flex-col justify-center gap-4 sm:flex-row">
 					{#if session && user}
 						<Button
+							href="/dashboard"
 							size="lg"
 							variant="secondary"
 							class="bg-white text-orange-600 hover:bg-orange-50"
 						>
 							<Map class="mr-2 h-4 w-4" />
-							Explore Heritage Map
+							Explore Heritage
 							<ArrowRight class="ml-2 h-4 w-4" />
 						</Button>
 						<Button size="lg" variant="outline" class="border-white text-white hover:bg-white/10">
 							<Users class="mr-2 h-4 w-4" />
-							Join Community
+							Connect with Community
 						</Button>
 					{:else}
 						<Button
@@ -358,18 +351,18 @@
 							class="bg-white text-orange-600 hover:bg-orange-50"
 						>
 							<Zap class="mr-2 h-4 w-4" />
-							Get Started Free
+							Start Exploring
 							<ArrowRight class="ml-2 h-4 w-4" />
 						</Button>
 						<Button size="lg" variant="outline" class="border-white text-white hover:bg-white/10">
 							<BookOpen class="mr-2 h-4 w-4" />
-							Learn More
+							Discover More
 						</Button>
 					{/if}
 				</div>
 
 				<p class="text-sm opacity-75">
-					Part of Smart India Hackathon 2025 • Preserving Heritage Through Technology
+					Trusted by heritage enthusiasts • Powered by cultural experts • Built for preservation
 				</p>
 			</div>
 		</div>

@@ -50,18 +50,23 @@ export const load = async ({ params, locals: { supabase, safeGetSession } }) => 
 	// Parse tags into array
 	const tags = profile.tags ? profile.tags.split(',').filter((tag: string) => tag.trim()) : [];
 
-	// Calculate profile completion percentage
-	const fields = [
-		profile.full_name,
-		profile.username,
-		profile.gender,
-		profile.date_of_birth,
-		profile.state,
-		profile.bio,
-		tags.length > 0
-	];
-	const completedFields = fields.filter((field) => field).length;
-	const completionPercentage = Math.round((completedFields / fields.length) * 100);
+	// Use completion percentage from database view if available, otherwise calculate manually
+	let completionPercentage = profile.completion_percentage;
+	if (completionPercentage === undefined || completionPercentage === null) {
+		// Fallback calculation if not available from view
+		let completedFields = 0;
+		const totalFields = 7;
+		
+		if (profile.full_name && profile.full_name.trim()) completedFields++;
+		if (profile.username && profile.username.trim()) completedFields++;
+		if (profile.gender) completedFields++;
+		if (profile.date_of_birth) completedFields++;
+		if (profile.state) completedFields++;
+		if (profile.tags && profile.tags.trim()) completedFields++;
+		if (profile.bio && profile.bio.trim()) completedFields++;
+		
+		completionPercentage = Math.round((completedFields / totalFields) * 100);
+	}
 
 	// Calculate age if date_of_birth is available
 	let age = null;

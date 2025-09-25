@@ -320,9 +320,85 @@ CREATE OR REPLACE FUNCTION update_profile_completion()
 RETURNS TRIGGER AS $$
 DECLARE
     completion_percentage INTEGER;
+    old_completion_percentage INTEGER := 0;
+    is_now_complete BOOLEAN := FALSE;
+    was_complete BOOLEAN := FALSE;
 BEGIN
+    -- Calculate current completion percentage
     completion_percentage := calculate_profile_completion(NEW.id);
+    is_now_complete := completion_percentage = 100;
+    
+    -- Check previous completion status
+    IF TG_OP = 'UPDATE' THEN
+        old_completion_percentage := calculate_profile_completion(OLD.id);
+        was_complete := old_completion_percentage = 100;
+    END IF;
+    
+    -- Update completion status
     NEW.is_profile_complete := completion_percentage >= 80;
+    
+    -- Log trigger execution for debugging
+    RAISE NOTICE 'Profile completion trigger fired for user %, completion: %%, complete: %', NEW.id, completion_percentage, is_now_complete;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Separate function to award completion points (called after update)
+CREATE OR REPLACE FUNCTION award_completion_points()
+RETURNS TRIGGER AS $$
+DECLARE
+    completion_percentage INTEGER;
+    old_completion_percentage INTEGER := 0;
+    is_now_complete BOOLEAN := FALSE;
+    was_complete BOOLEAN := FALSE;
+    current_points INTEGER;
+BEGIN
+    -- Calculate current completion percentage using NEW data
+    completion_percentage := calculate_profile_completion(NEW.id);
+    is_now_complete := completion_percentage = 100;
+    
+    -- Get current activity points to avoid duplicate awards
+    current_points := COALESCE(NEW.activity_points, 0);
+    
+    -- For UPDATE operations, calculate old completion using OLD data
+    IF TG_OP = 'UPDATE' THEN
+        -- Manually calculate old completion to avoid issues with calculate_profile_completion on OLD
+        old_completion_percentage := 0;
+        IF OLD.full_name IS NOT NULL AND OLD.full_name != '' THEN
+            old_completion_percentage := old_completion_percentage + 1;
+        END IF;
+        IF OLD.username IS NOT NULL AND OLD.username != '' THEN
+            old_completion_percentage := old_completion_percentage + 1;
+        END IF;
+        IF OLD.gender IS NOT NULL THEN
+            old_completion_percentage := old_completion_percentage + 1;
+        END IF;
+        IF OLD.date_of_birth IS NOT NULL THEN
+            old_completion_percentage := old_completion_percentage + 1;
+        END IF;
+        IF OLD.state IS NOT NULL THEN
+            old_completion_percentage := old_completion_percentage + 1;
+        END IF;
+        IF OLD.tags IS NOT NULL AND OLD.tags != '' THEN
+            old_completion_percentage := old_completion_percentage + 1;
+        END IF;
+        IF OLD.bio IS NOT NULL AND OLD.bio != '' THEN
+            old_completion_percentage := old_completion_percentage + 1;
+        END IF;
+        old_completion_percentage := (old_completion_percentage * 100 / 7);
+        was_complete := old_completion_percentage = 100;
+    END IF;
+    
+    -- Award 50 points for first-time 100% completion (only if user has 0 points to avoid duplicates)
+    IF is_now_complete AND NOT was_complete AND current_points = 0 THEN
+        UPDATE profiles 
+        SET activity_points = 50 
+        WHERE id = NEW.id;
+        
+        -- Log the points award for debugging
+        RAISE NOTICE 'Awarded 50 points to user % for profile completion', NEW.id;
+    END IF;
     
     RETURN NEW;
 END;
@@ -346,8 +422,16 @@ CREATE TRIGGER trigger_update_profile_completion
     BEFORE INSERT OR UPDATE ON profiles
     FOR EACH ROW EXECUTE FUNCTION update_profile_completion();
 
+-- Trigger 3: Award completion points (after update)
+DROP TRIGGER IF EXISTS trigger_award_completion_points ON profiles;
+CREATE TRIGGER trigger_award_completion_points
+    AFTER INSERT OR UPDATE ON profiles
+    FOR EACH ROW EXECUTE FUNCTION award_completion_points();
+
 COMMENT ON TRIGGER trigger_update_profile_completion ON profiles IS 
     'Updates profile completion status when profile data changes';
+COMMENT ON TRIGGER trigger_award_completion_points ON profiles IS 
+    'Awards activity points when profile reaches 100% completion';
 
 
 CREATE OR REPLACE FUNCTION public.handle_new_user_manually(
@@ -599,6 +683,37 @@ BEGIN
     UPDATE profiles 
     SET activity_points = activity_points + points_to_add, updated_at = NOW()
     WHERE id = user_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to manually award completion points (call this to fix missing points)
+CREATE OR REPLACE FUNCTION award_completion_bonus(user_id UUID)
+RETURNS BOOLEAN AS $$
+DECLARE
+    completion_percent INTEGER;
+    current_points INTEGER;
+    profile_complete BOOLEAN;
+BEGIN
+    -- Get current profile status
+    SELECT 
+        calculate_profile_completion(id),
+        activity_points,
+        is_profile_complete
+    INTO completion_percent, current_points, profile_complete
+    FROM profiles 
+    WHERE id = user_id;
+    
+    -- If profile is 100% complete but user has 0 points, award them
+    IF completion_percent = 100 AND current_points = 0 THEN
+        UPDATE profiles 
+        SET activity_points = 50, updated_at = NOW()
+        WHERE id = user_id;
+        
+        RAISE NOTICE 'Awarded 50 completion points to user %', user_id;
+        RETURN TRUE;
+    END IF;
+    
+    RETURN FALSE;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

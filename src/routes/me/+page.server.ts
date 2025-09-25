@@ -1,5 +1,23 @@
 import { redirect, fail } from '@sveltejs/kit';
 
+// Helper function to calculate profile completion percentage
+function calculateProfileCompletion(profile: any): number {
+	if (!profile) return 0;
+	
+	let completedFields = 0;
+	const totalFields = 7;
+	
+	if (profile.full_name && profile.full_name.trim()) completedFields++;
+	if (profile.username && profile.username.trim()) completedFields++;
+	if (profile.gender) completedFields++;
+	if (profile.date_of_birth) completedFields++;
+	if (profile.state) completedFields++;
+	if (profile.tags && profile.tags.trim()) completedFields++;
+	if (profile.bio && profile.bio.trim()) completedFields++;
+	
+	return Math.round((completedFields / totalFields) * 100);
+}
+
 export const load = async ({ locals: { supabase, safeGetSession } }) => {
 	const { session, user } = await safeGetSession();
 
@@ -8,13 +26,16 @@ export const load = async ({ locals: { supabase, safeGetSession } }) => {
 		redirect(303, '/auth');
 	}
 
-	// Try to load existing profile data
+	// Try to load existing profile data with completion percentage
 	let profile = null;
+	let completionPercentage = 0;
 	try {
 		const { data, error } = await supabase.from('profiles').select('*').eq('id', user.id).single();
 
-		if (!error) {
+		if (!error && data) {
 			profile = data;
+			// Calculate completion percentage
+			completionPercentage = calculateProfileCompletion(data);
 		}
 	} catch (err) {
 		// Profile might not exist yet, that's okay
@@ -24,7 +45,8 @@ export const load = async ({ locals: { supabase, safeGetSession } }) => {
 	return {
 		session,
 		user,
-		profile
+		profile,
+		completionPercentage
 	};
 };
 
@@ -51,6 +73,15 @@ export const actions = {
 				errors: {
 					fullName: !fullName ? 'Full name is required' : null,
 					username: !username ? 'Username is required' : null
+				},
+				data: {
+					fullName,
+					username,
+					gender,
+					dateOfBirth,
+					state,
+					tags,
+					bio
 				}
 			});
 		}
@@ -68,6 +99,15 @@ export const actions = {
 				return fail(400, {
 					errors: {
 						username: 'Username is already taken'
+					},
+					data: {
+						fullName,
+						username,
+						gender,
+						dateOfBirth,
+						state,
+						tags,
+						bio
 					}
 				});
 			}

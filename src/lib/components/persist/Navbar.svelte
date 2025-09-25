@@ -5,17 +5,10 @@
 	import Icon from '$lib/assets/branding/icon.png';
 	import { page } from '$app/stores';
 	import { enhance } from '$app/forms';
-	import { createAvatarProps } from '$lib/utils/avatar';
+	import { Avatar } from '$lib/components/ui/avatar';
 
 	let { session, user, profile } = $derived($page.data);
 	let mobileMenuOpen = $state(false);
-	
-	// Create avatar properties for navbar
-	const navAvatarProps = $derived(
-		session && (profile || user) 
-			? createAvatarProps(profile || user, 'h-8 w-8')
-			: null
-	);
 
 	function toggleMobileMenu() {
 		mobileMenuOpen = !mobileMenuOpen;
@@ -52,12 +45,10 @@
 			<div class="hidden md:flex items-center space-x-2">
 				{#if session && user}
 					<!-- Authenticated user menu -->
-					{#if navAvatarProps}
-						<img 
-							{...navAvatarProps}
-							loading="lazy"
-						/>
-					{/if}
+					<Avatar 
+						user={profile || user}
+						size="h-8 w-8"
+					/>
 					<span class="text-sm text-muted-foreground hidden lg:inline">
 						Welcome, {user.user_metadata?.full_name || user.email}
 					</span>
@@ -109,12 +100,10 @@
 					{#if session && user}
 						<!-- Mobile authenticated user menu -->
 						<div class="px-3 py-2 flex items-center gap-3">
-							{#if navAvatarProps}
-								<img 
-									{...navAvatarProps}
-									loading="lazy"
-								/>
-							{/if}
+							<Avatar 
+								user={profile || user}
+								size="h-8 w-8"
+							/>
 							<div>
 								<div class="text-base font-medium text-foreground">
 									{user.user_metadata?.full_name || user.email}

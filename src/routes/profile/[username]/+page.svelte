@@ -16,7 +16,7 @@
 		BookOpen
 	} from 'lucide-svelte';
 	import { page } from '$app/stores';
-	import { createAvatarProps } from '$lib/utils/avatar';
+	import { Avatar } from '$lib/components/ui/avatar';
 
 	let { data } = $props();
 	let { profile, isOwnProfile, currentUser } = $derived(data);
@@ -29,8 +29,7 @@
 		});
 	};
 
-	// Create avatar properties
-	const avatarProps = $derived(createAvatarProps(profile, 'h-24 w-24 md:h-32 md:w-32'));
+
 
 	// Share profile function
 	const shareProfile = async () => {
@@ -69,9 +68,9 @@
 				<div class="flex flex-col items-start gap-6 md:flex-row">
 					<!-- Avatar -->
 					<div class="flex-shrink-0">
-						<img 
-							{...avatarProps}
-							loading="lazy"
+						<Avatar 
+							user={profile}
+							size="h-24 w-24 md:h-32 md:w-32"
 						/>
 					</div>
 

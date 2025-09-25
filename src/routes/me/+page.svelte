@@ -5,14 +5,15 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Badge } from '$lib/components/ui/badge';
 	import { enhance } from '$app/forms';
-	import { User, Calendar, MapPin, Tag, FileText, X } from 'lucide-svelte';
-	import { createAvatarProps } from '$lib/utils/avatar';
+	import { User, Calendar, MapPin, Tag, FileText, X, Award, Star } from 'lucide-svelte';
+	import { Avatar } from '$lib/components/ui/avatar';
 
 	let { data, form } = $props();
-	let { session, user, profile } = $derived(data);
+	let { session, user, profile, completionPercentage } = $derived(data);
 	
-	// Create avatar properties
-	const avatarProps = $derived(createAvatarProps(profile || user, 'h-20 w-20'));
+	// Calculate points to earn
+	const isFullyComplete = $derived(completionPercentage === 100);
+	const pointsToEarn = $derived(isFullyComplete ? 0 : 50);
 
 	// Indian states and union territories
 	const indianStates = [
@@ -108,9 +109,9 @@
 				<Card.Description>Your unique avatar generated from your username</Card.Description>
 			</Card.Header>
 			<Card.Content class="flex items-center gap-4">
-				<img 
-					{...avatarProps}
-					loading="lazy"
+				<Avatar 
+					user={profile || user}
+					size="h-20 w-20"
 				/>
 				<div class="space-y-1">
 					<p class="text-sm font-medium">Auto-generated Avatar</p>
@@ -118,6 +119,66 @@
 						Your avatar is automatically generated based on your username. 
 						Change your username to get a different avatar design.
 					</p>
+				</div>
+			</Card.Content>
+		</Card.Root>
+
+		<!-- Profile Completion Progress -->
+		<Card.Root class="mb-8 {isFullyComplete ? 'border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/50' : 'border-orange-200 bg-orange-50/50 dark:border-orange-800 dark:bg-orange-950/50'}">
+			<Card.Header>
+				<Card.Title class="flex items-center gap-2">
+					{#if isFullyComplete}
+						<Star class="h-5 w-5 text-green-600" />
+						Profile Complete!
+					{:else}
+						<Award class="h-5 w-5 text-orange-600" />
+						Complete Your Profile
+					{/if}
+				</Card.Title>
+				<Card.Description>
+					{#if isFullyComplete}
+						Congratulations! Your profile is 100% complete. You've earned all completion rewards.
+					{:else}
+						Fill out all profile fields to earn {pointsToEarn} activity points and unlock the full Arvaya experience.
+					{/if}
+				</Card.Description>
+			</Card.Header>
+			<Card.Content>
+				<div class="space-y-3">
+					<!-- Progress Bar -->
+					<div class="space-y-2">
+						<div class="flex justify-between text-sm">
+							<span class="text-muted-foreground">Profile Completion</span>
+							<span class="font-medium {isFullyComplete ? 'text-green-600' : 'text-orange-600'}">{completionPercentage}%</span>
+						</div>
+						<div class="w-full bg-muted rounded-full h-2">
+							<div 
+								class="h-2 rounded-full transition-all duration-500 {isFullyComplete ? 'bg-green-500' : 'bg-orange-500'}" 
+								style="width: {completionPercentage}%"
+							></div>
+						</div>
+					</div>
+
+					{#if !isFullyComplete}
+						<!-- Points Reward -->
+						<div class="flex items-center justify-between p-3 bg-background rounded-lg border">
+							<div class="flex items-center gap-2">
+								<Award class="h-4 w-4 text-orange-500" />
+								<span class="text-sm font-medium">Completion Reward</span>
+							</div>
+							<Badge variant="secondary" class="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
+								+{pointsToEarn} points
+							</Badge>
+						</div>
+					{:else}
+						<!-- Completed State -->
+						<div class="flex items-center justify-center p-3 bg-background rounded-lg border border-green-200 dark:border-green-800">
+							<div class="flex items-center gap-2 text-green-600">
+								<Star class="h-4 w-4" />
+								<span class="text-sm font-medium">Profile Complete - Reward Earned!</span>
+							</div>
+						</div>
+					{/if}
 				</div>
 			</Card.Content>
 		</Card.Root>
