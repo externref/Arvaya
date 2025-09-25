@@ -6,9 +6,13 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { enhance } from '$app/forms';
 	import { User, Calendar, MapPin, Tag, FileText, X } from 'lucide-svelte';
+	import { createAvatarProps } from '$lib/utils/avatar';
 
 	let { data, form } = $props();
 	let { session, user, profile } = $derived(data);
+	
+	// Create avatar properties
+	const avatarProps = $derived(createAvatarProps(profile || user, 'h-20 w-20'));
 
 	// Indian states and union territories
 	const indianStates = [
@@ -93,6 +97,30 @@
 				Customize your profile to enhance your Arvaya experience
 			</p>
 		</div>
+
+		<!-- Avatar Preview -->
+		<Card.Root class="mb-8">
+			<Card.Header>
+				<Card.Title class="flex items-center gap-2">
+					<User class="h-5 w-5 text-orange-600" />
+					Profile Picture
+				</Card.Title>
+				<Card.Description>Your unique avatar generated from your username</Card.Description>
+			</Card.Header>
+			<Card.Content class="flex items-center gap-4">
+				<img 
+					{...avatarProps}
+					loading="lazy"
+				/>
+				<div class="space-y-1">
+					<p class="text-sm font-medium">Auto-generated Avatar</p>
+					<p class="text-xs text-muted-foreground">
+						Your avatar is automatically generated based on your username. 
+						Change your username to get a different avatar design.
+					</p>
+				</div>
+			</Card.Content>
+		</Card.Root>
 
 		<!-- Profile Form -->
 		<form method="POST" action="?/updateProfile" use:enhance>

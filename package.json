@@ -38,6 +38,7 @@
 		"vite": "^7.0.4"
 	},
 	"dependencies": {
+		"@multiavatar/multiavatar": "^1.0.7",
 		"@supabase/ssr": "^0.7.0",
 		"@supabase/supabase-js": "^2.57.4",
 		"lucide-svelte": "^0.544.0",
