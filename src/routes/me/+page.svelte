@@ -11,7 +11,7 @@
 	let { data, form } = $props();
 	let { session, user, profile, completionPercentage } = $derived(data);
 	
-	// Calculate points to earn
+	// Calculate completion status and points to earn
 	const isFullyComplete = $derived(completionPercentage === 100);
 	const pointsToEarn = $derived(isFullyComplete ? 0 : 50);
 
@@ -139,7 +139,7 @@
 					{#if isFullyComplete}
 						Congratulations! Your profile is 100% complete. You've earned all completion rewards.
 					{:else}
-						Fill out all profile fields to earn {pointsToEarn} activity points and unlock the full Arvaya experience.
+						Complete your profile to earn {pointsToEarn} activity points and unlock the full Arvaya experience.
 					{/if}
 				</Card.Description>
 			</Card.Header>
@@ -175,7 +175,7 @@
 						<div class="flex items-center justify-center p-3 bg-background rounded-lg border border-green-200 dark:border-green-800">
 							<div class="flex items-center gap-2 text-green-600">
 								<Star class="h-4 w-4" />
-								<span class="text-sm font-medium">Profile Complete - Reward Earned!</span>
+								<span class="text-sm font-medium">Profile Complete - 50 Points Earned!</span>
 							</div>
 						</div>
 					{/if}
@@ -364,7 +364,7 @@
 			<Card.Header>
 				<Card.Title class="flex items-center gap-2">⭐ Activity Metrics</Card.Title>
 				<Card.Description>
-					Your current activity stats (these would normally be updated automatically)
+					Your current activity stats and points earned
 				</Card.Description>
 			</Card.Header>
 			<Card.Content>
@@ -409,8 +409,17 @@
 						Testing buttons - in production, these would be updated automatically when you perform
 						activities.
 					</p>
+					{#if !isFullyComplete}
+						<div class="mt-4 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+							<p class="text-sm text-orange-700 dark:text-orange-300">
+								Complete your profile to earn {pointsToEarn} more points automatically!
+							</p>
+						</div>
+					{/if}
 				</div>
 			</Card.Content>
 		</Card.Root>
+
+
 	</div>
 </div>

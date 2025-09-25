@@ -17,7 +17,7 @@ export const actions = {
 			});
 		}
 
-		// Sign up the user
+		// Sign up the user with metadata for profile creation
 		const { data, error } = await supabase.auth.signUp({
 			email,
 			password,
@@ -36,6 +36,8 @@ export const actions = {
 				name
 			});
 		}
+
+
 
 		// If signup successful, redirect to confirmation or dashboard
 		if (data.user && !data.user.email_confirmed_at) {
@@ -58,7 +60,7 @@ export const actions = {
 			});
 		}
 
-		const { error } = await supabase.auth.signInWithPassword({ email, password });
+		const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
 		if (error) {
 			return fail(400, {
@@ -66,6 +68,8 @@ export const actions = {
 				email
 			});
 		}
+
+
 
 		// Successful login - redirect to dashboard
 		redirect(303, '/dashboard');

@@ -1,11 +1,18 @@
+-- Arvaya Database Schema - Basic User Management
+-- Safe to run multiple times
+
+-- Enable necessary extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- Create enums for profile data (safe to run multiple times)
 DO $$ 
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'gender_type') THEN
         CREATE TYPE gender_type AS ENUM ('Male', 'Female', 'Non-binary', 'Prefer not to say');
     END IF;
 END $$;
+
 DO $$ 
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'indian_state_type') THEN
@@ -21,6 +28,7 @@ BEGIN
     END IF;
 END $$;
 
+-- Profiles table with user information and activity metrics
 CREATE TABLE IF NOT EXISTS profiles (
     id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
     full_name TEXT,
@@ -30,192 +38,216 @@ CREATE TABLE IF NOT EXISTS profiles (
     state indian_state_type,
     tags TEXT,
     bio TEXT,
+    profile_image_url TEXT,
+    blog_count INTEGER DEFAULT 0 CHECK (blog_count >= 0),
+    places_explored INTEGER DEFAULT 0 CHECK (places_explored >= 0),
+    endorsements INTEGER DEFAULT 0 CHECK (endorsements >= 0),
+    activity_points INTEGER DEFAULT 0 CHECK (activity_points >= 0),
+    is_profile_complete BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-
-DO $$
-DECLARE
-    profile_record RECORD;
-    new_username TEXT;
-    counter INTEGER;
-BEGIN
-    FOR profile_record IN 
-        SELECT id, username FROM profiles WHERE length(username) < 3
-    LOOP
-        new_username := profile_record.username || 'user';
-        counter := 1;
-        WHILE EXISTS (SELECT 1 FROM profiles WHERE username = new_username AND id != profile_record.id) LOOP
-            new_username := profile_record.username || 'user' || counter::TEXT;
-            counter := counter + 1;
-        END LOOP;
-        UPDATE profiles SET username = new_username WHERE id = profile_record.id;
-    END LOOP;
-    
-    FOR profile_record IN 
-        SELECT id, username FROM profiles WHERE length(username) > 20
-    LOOP
-        new_username := left(profile_record.username, 20);
-        counter := 1;
-        WHILE EXISTS (SELECT 1 FROM profiles WHERE username = new_username AND id != profile_record.id) LOOP
-            IF length(new_username) + length(counter::TEXT) > 20 THEN
-                new_username := left(profile_record.username, 20 - length(counter::TEXT)) || counter::TEXT;
-            ELSE
-                new_username := left(profile_record.username, 20 - length(counter::TEXT)) || counter::TEXT;
-            END IF;
-            counter := counter + 1;
-        END LOOP;
-        UPDATE profiles SET username = new_username WHERE id = profile_record.id;
-    END LOOP;
-    
-    FOR profile_record IN 
-        SELECT id, username FROM profiles WHERE username !~ '^[a-zA-Z0-9_]+$'
-    LOOP
-        new_username := lower(regexp_replace(profile_record.username, '[^a-zA-Z0-9_]', '', 'g'));
-        IF length(new_username) < 3 THEN
-            new_username := new_username || 'user';
-        END IF;
-        IF length(new_username) > 20 THEN
-            new_username := left(new_username, 20);
-        END IF;
-        counter := 1;
-        WHILE EXISTS (SELECT 1 FROM profiles WHERE username = new_username AND id != profile_record.id) LOOP
-            IF length(new_username) + length(counter::TEXT) > 20 THEN
-                new_username := left(new_username, 20 - length(counter::TEXT)) || counter::TEXT;
-            ELSE
-                new_username := new_username || counter::TEXT;
-            END IF;
-            counter := counter + 1;
-        END LOOP;
-        UPDATE profiles SET username = new_username WHERE id = profile_record.id;
-    END LOOP;
-EXCEPTION WHEN OTHERS THEN
-    NULL;
-END $$;
-
+-- Add new columns if they don't exist (for existing databases) - DO THIS FIRST
 DO $$
 BEGIN
-    BEGIN
-        ALTER TABLE profiles ADD CONSTRAINT profiles_bio_check CHECK (length(bio) <= 500);
-    EXCEPTION WHEN duplicate_object THEN
-        NULL;
-    END;
-    BEGIN
-        ALTER TABLE profiles ADD CONSTRAINT username_length CHECK (length(username) >= 3 AND length(username) <= 20);
-    EXCEPTION WHEN duplicate_object THEN
-        NULL;
-    END;
-    BEGIN
-        ALTER TABLE profiles ADD CONSTRAINT username_format CHECK (username ~ '^[a-zA-Z0-9_]+$');
-    EXCEPTION WHEN duplicate_object THEN
-        NULL;
-    END;
-    BEGIN
-        ALTER TABLE profiles ADD CONSTRAINT valid_birth_date CHECK (date_of_birth <= CURRENT_DATE AND date_of_birth >= '1900-01-01');
-    EXCEPTION WHEN duplicate_object THEN
-        NULL;
-    END;
-END $$;
-
-DO $$
-BEGIN
+    -- Add blog_count column if it doesn't exist
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'blog_count') THEN
-        ALTER TABLE profiles ADD COLUMN blog_count INTEGER DEFAULT 0 CHECK (blog_count >= 0);
+        ALTER TABLE profiles ADD COLUMN blog_count INTEGER DEFAULT 0;
     END IF;
+    
+    -- Add places_explored column if it doesn't exist
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'places_explored') THEN
-        ALTER TABLE profiles ADD COLUMN places_explored INTEGER DEFAULT 0 CHECK (places_explored >= 0);
+        ALTER TABLE profiles ADD COLUMN places_explored INTEGER DEFAULT 0;
     END IF;
+    
+    -- Add endorsements column if it doesn't exist
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'endorsements') THEN
-        ALTER TABLE profiles ADD COLUMN endorsements INTEGER DEFAULT 0 CHECK (endorsements >= 0);
+        ALTER TABLE profiles ADD COLUMN endorsements INTEGER DEFAULT 0;
     END IF;
+    
+    -- Add activity_points column if it doesn't exist
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'activity_points') THEN
-        ALTER TABLE profiles ADD COLUMN activity_points INTEGER DEFAULT 0 CHECK (activity_points >= 0);
+        ALTER TABLE profiles ADD COLUMN activity_points INTEGER DEFAULT 0;
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'profile_image_url') THEN
-        ALTER TABLE profiles ADD COLUMN profile_image_url TEXT;
-    END IF;
+    
+    -- Add is_profile_complete column if it doesn't exist  
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'is_profile_complete') THEN
         ALTER TABLE profiles ADD COLUMN is_profile_complete BOOLEAN DEFAULT FALSE;
     END IF;
 END $$;
 
+-- Add constraints AFTER columns exist (safe to run multiple times)
 DO $$
 BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'blog_count') THEN
-        BEGIN
-            ALTER TABLE profiles ADD CONSTRAINT profiles_blog_count_check CHECK (blog_count >= 0);
-        EXCEPTION WHEN duplicate_object THEN
-            NULL;
-        END;
+    -- Bio length constraint
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'profiles_bio_check') THEN
+        ALTER TABLE profiles ADD CONSTRAINT profiles_bio_check CHECK (length(bio) <= 500);
     END IF;
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'places_explored') THEN
-        BEGIN
-            ALTER TABLE profiles ADD CONSTRAINT profiles_places_explored_check CHECK (places_explored >= 0);
-        EXCEPTION WHEN duplicate_object THEN
-            NULL;
-        END;
+    
+    -- Username length constraint
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'username_length') THEN
+        ALTER TABLE profiles ADD CONSTRAINT username_length CHECK (length(username) >= 3 AND length(username) <= 20);
     END IF;
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'endorsements') THEN
-        BEGIN
-            ALTER TABLE profiles ADD CONSTRAINT profiles_endorsements_check CHECK (endorsements >= 0);
-        EXCEPTION WHEN duplicate_object THEN
-            NULL;
-        END;
+    
+    -- Username format constraint
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'username_format') THEN
+        ALTER TABLE profiles ADD CONSTRAINT username_format CHECK (username ~ '^[a-zA-Z0-9_]+$');
     END IF;
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'activity_points') THEN
-        BEGIN
-            ALTER TABLE profiles ADD CONSTRAINT profiles_activity_points_check CHECK (activity_points >= 0);
-        EXCEPTION WHEN duplicate_object THEN
-            NULL;
-        END;
+    
+    -- Valid birth date constraint
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'valid_birth_date') THEN
+        ALTER TABLE profiles ADD CONSTRAINT valid_birth_date CHECK (date_of_birth <= CURRENT_DATE AND date_of_birth >= '1900-01-01');
+    END IF;
+    
+    -- Activity points constraint
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'profiles_activity_points_check') THEN
+        ALTER TABLE profiles ADD CONSTRAINT profiles_activity_points_check CHECK (activity_points >= 0);
+    END IF;
+    
+    -- Blog count constraint
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'profiles_blog_count_check') THEN
+        ALTER TABLE profiles ADD CONSTRAINT profiles_blog_count_check CHECK (blog_count >= 0);
+    END IF;
+    
+    -- Places explored constraint
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'profiles_places_explored_check') THEN
+        ALTER TABLE profiles ADD CONSTRAINT profiles_places_explored_check CHECK (places_explored >= 0);
+    END IF;
+    
+    -- Endorsements constraint
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'profiles_endorsements_check') THEN
+        ALTER TABLE profiles ADD CONSTRAINT profiles_endorsements_check CHECK (endorsements >= 0);
     END IF;
 END $$;
 
-
+-- Create indexes (safe to run multiple times)
 CREATE INDEX IF NOT EXISTS idx_profiles_username ON profiles(username);
-CREATE INDEX IF NOT EXISTS idx_profiles_state ON profiles(state);
-CREATE INDEX IF NOT EXISTS idx_profiles_updated_at ON profiles(updated_at);
-CREATE INDEX IF NOT EXISTS idx_profiles_created_at ON profiles(created_at);
-CREATE INDEX IF NOT EXISTS idx_profiles_is_complete ON profiles(is_profile_complete);
-CREATE INDEX IF NOT EXISTS idx_profiles_blog_count ON profiles(blog_count DESC);
-CREATE INDEX IF NOT EXISTS idx_profiles_places_explored ON profiles(places_explored DESC);
-CREATE INDEX IF NOT EXISTS idx_profiles_endorsements ON profiles(endorsements DESC);
-CREATE INDEX IF NOT EXISTS idx_profiles_activity_points ON profiles(activity_points DESC);
-CREATE INDEX IF NOT EXISTS idx_profiles_tags_gin ON profiles USING gin(to_tsvector('english', tags));
 
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'profiles') THEN
-        ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-    END IF;
-END $$;
+-- Enable RLS
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
-ALTER TABLE profiles DISABLE ROW LEVEL SECURITY;
+-- RLS Policies (drop and recreate to ensure consistency)
+DROP POLICY IF EXISTS "Users can view all profiles" ON profiles;
+CREATE POLICY "Users can view all profiles" ON profiles
+    FOR SELECT USING (true);
 
-DROP POLICY IF EXISTS "Users can view own profile" ON profiles;
-DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON profiles;
-DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
 DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
-DROP POLICY IF EXISTS "Users can delete own profile" ON profiles;
-
-CREATE POLICY "Public profiles are viewable by everyone" ON profiles
-    FOR SELECT 
-    USING (true);
-
-CREATE POLICY "Users can insert own profile" ON profiles
-    FOR INSERT 
-    WITH CHECK (auth.uid() = id);
-
 CREATE POLICY "Users can update own profile" ON profiles
-    FOR UPDATE 
-    USING (auth.uid() = id) 
-    WITH CHECK (auth.uid() = id);
+    FOR UPDATE USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
+CREATE POLICY "Users can insert own profile" ON profiles
+    FOR INSERT WITH CHECK (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Users can delete own profile" ON profiles;
 CREATE POLICY "Users can delete own profile" ON profiles
-    FOR DELETE 
-    USING (auth.uid() = id);
+    FOR DELETE USING (auth.uid() = id);
 
+-- Function to generate unique username from email
+CREATE OR REPLACE FUNCTION generate_unique_username(user_email TEXT, display_name TEXT DEFAULT '')
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    base_username TEXT;
+    final_username TEXT;
+    counter INTEGER := 0;
+    max_attempts INTEGER := 100;
+BEGIN
+    -- Try to use display name first if provided
+    IF display_name IS NOT NULL AND length(trim(display_name)) > 0 THEN
+        base_username := LOWER(trim(display_name));
+        -- Clean username: keep only alphanumeric and underscore
+        base_username := regexp_replace(base_username, '[^a-zA-Z0-9_]', '', 'g');
+        base_username := regexp_replace(base_username, '\s+', '_', 'g');
+    END IF;
+    
+    -- Fallback to email if display name is empty or too short
+    IF base_username IS NULL OR length(base_username) < 3 THEN
+        base_username := LOWER(split_part(user_email, '@', 1));
+        -- Clean username: keep only alphanumeric and underscore
+        base_username := regexp_replace(base_username, '[^a-zA-Z0-9_]', '', 'g');
+    END IF;
+    
+    -- Ensure minimum length
+    IF length(base_username) < 3 THEN
+        base_username := base_username || '123';
+    END IF;
+    
+    -- Ensure maximum length
+    IF length(base_username) > 15 THEN
+        base_username := left(base_username, 15);
+    END IF;
+    
+    final_username := base_username;
+    
+    -- Find unique username
+    WHILE counter < max_attempts LOOP
+        -- Check if username exists
+        IF NOT EXISTS (SELECT 1 FROM profiles WHERE username = final_username) THEN
+            RETURN final_username;
+        END IF;
+        
+        counter := counter + 1;
+        final_username := base_username || counter::TEXT;
+        
+        -- Ensure we don't exceed length limit with counter
+        IF length(final_username) > 20 THEN
+            base_username := left(base_username, 20 - length(counter::TEXT));
+            final_username := base_username || counter::TEXT;
+        END IF;
+    END LOOP;
+    
+    -- If we can't find a unique username, use UUID suffix
+    RETURN left(base_username, 15) || substr(gen_random_uuid()::TEXT, 1, 5);
+END;
+$$;
+
+-- Function to automatically create profile when user signs up
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    generated_username TEXT;
+    user_email TEXT;
+    display_name TEXT;
+BEGIN
+    -- Get user email and display name from the new user record
+    user_email := COALESCE(NEW.email, '');
+    display_name := COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', '');
+    
+    -- Generate unique username
+    generated_username := generate_unique_username(user_email, display_name);
+    
+    -- Insert profile record
+    INSERT INTO profiles (
+        id,
+        full_name,
+        username,
+        created_at,
+        updated_at
+    ) VALUES (
+        NEW.id,
+        display_name,
+        generated_username,
+        NOW(),
+        NOW()
+    );
+    
+    RETURN NEW;
+EXCEPTION
+    WHEN OTHERS THEN
+        -- Log error but don't fail the user creation
+        RAISE WARNING 'Failed to create profile for user %: %', NEW.id, SQLERRM;
+        RETURN NEW;
+END;
+$$;
+
+-- Function to update timestamps
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -224,561 +256,261 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION generate_default_username(email TEXT)
-RETURNS TEXT AS $$
-DECLARE
-    base_username TEXT;
-    final_username TEXT;
-    counter INTEGER := 0;
+-- Create trigger to automatically create profile on user signup
+-- Note: This trigger may fail in some Supabase configurations due to auth schema permissions
+-- If it fails, profiles will be created manually via the handle_new_user_manually function
+DO $$
 BEGIN
-    base_username := split_part(email, '@', 1);
-    base_username := lower(regexp_replace(base_username, '[^a-zA-Z0-9]', '', 'g'));
-    IF length(base_username) < 3 THEN
-        base_username := base_username || 'user';
-    END IF;
-    IF length(base_username) > 20 THEN
-        base_username := left(base_username, 20);
-    END IF;
-    final_username := base_username;
-    WHILE EXISTS (SELECT 1 FROM profiles WHERE username = final_username) LOOP
-        counter := counter + 1;
-        final_username := base_username || counter::TEXT;
-        IF length(final_username) > 20 THEN
-            base_username := left(base_username, 20 - length(counter::TEXT));
-            final_username := base_username || counter::TEXT;
-        END IF;
-    END LOOP;
-    RETURN final_username;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION calculate_profile_completion(profile_id UUID)
-RETURNS INTEGER AS $$
-DECLARE
-    profile_record profiles%ROWTYPE;
-    completion_score INTEGER := 0;
-    total_fields INTEGER := 7;
-BEGIN
-    SELECT * INTO profile_record FROM profiles WHERE id = profile_id;
-    IF profile_record.full_name IS NOT NULL AND profile_record.full_name != '' THEN
-        completion_score := completion_score + 1;
-    END IF;
-    IF profile_record.username IS NOT NULL AND profile_record.username != '' THEN
-        completion_score := completion_score + 1;
-    END IF;
-    IF profile_record.gender IS NOT NULL THEN
-        completion_score := completion_score + 1;
-    END IF;
-    IF profile_record.date_of_birth IS NOT NULL THEN
-        completion_score := completion_score + 1;
-    END IF;
-    IF profile_record.state IS NOT NULL THEN
-        completion_score := completion_score + 1;
-    END IF;
-    IF profile_record.tags IS NOT NULL AND profile_record.tags != '' THEN
-        completion_score := completion_score + 1;
-    END IF;
-    IF profile_record.bio IS NOT NULL AND profile_record.bio != '' THEN
-        completion_score := completion_score + 1;
-    END IF;
-    RETURN (completion_score * 100 / total_fields);
-END;
-$$ LANGUAGE plpgsql;
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-DECLARE
-    default_username TEXT;
-BEGIN
-    default_username := generate_default_username(NEW.email);
+    -- Drop trigger if it exists
+    DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
     
-    INSERT INTO public.profiles (
-        id, 
-        full_name, 
-        username, 
-        created_at, 
-        updated_at,
-        is_profile_complete
-    )
-    VALUES (
-        NEW.id,
-        COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
-        default_username,
-        NOW(),
-        NOW(),
-        FALSE
-    );
-    
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-COMMENT ON FUNCTION public.handle_new_user() IS 
-    'Trigger function to automatically create a profile when a new user signs up';
-
-
-CREATE OR REPLACE FUNCTION update_profile_completion()
-RETURNS TRIGGER AS $$
-DECLARE
-    completion_percentage INTEGER;
-    old_completion_percentage INTEGER := 0;
-    is_now_complete BOOLEAN := FALSE;
-    was_complete BOOLEAN := FALSE;
-BEGIN
-    -- Calculate current completion percentage
-    completion_percentage := calculate_profile_completion(NEW.id);
-    is_now_complete := completion_percentage = 100;
-    
-    -- Check previous completion status
-    IF TG_OP = 'UPDATE' THEN
-        old_completion_percentage := calculate_profile_completion(OLD.id);
-        was_complete := old_completion_percentage = 100;
-    END IF;
-    
-    -- Update completion status
-    NEW.is_profile_complete := completion_percentage >= 80;
-    
-    -- Log trigger execution for debugging
-    RAISE NOTICE 'Profile completion trigger fired for user %, completion: %%, complete: %', NEW.id, completion_percentage, is_now_complete;
-    
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Separate function to award completion points (called after update)
-CREATE OR REPLACE FUNCTION award_completion_points()
-RETURNS TRIGGER AS $$
-DECLARE
-    completion_percentage INTEGER;
-    old_completion_percentage INTEGER := 0;
-    is_now_complete BOOLEAN := FALSE;
-    was_complete BOOLEAN := FALSE;
-    current_points INTEGER;
-BEGIN
-    -- Calculate current completion percentage using NEW data
-    completion_percentage := calculate_profile_completion(NEW.id);
-    is_now_complete := completion_percentage = 100;
-    
-    -- Get current activity points to avoid duplicate awards
-    current_points := COALESCE(NEW.activity_points, 0);
-    
-    -- For UPDATE operations, calculate old completion using OLD data
-    IF TG_OP = 'UPDATE' THEN
-        -- Manually calculate old completion to avoid issues with calculate_profile_completion on OLD
-        old_completion_percentage := 0;
-        IF OLD.full_name IS NOT NULL AND OLD.full_name != '' THEN
-            old_completion_percentage := old_completion_percentage + 1;
-        END IF;
-        IF OLD.username IS NOT NULL AND OLD.username != '' THEN
-            old_completion_percentage := old_completion_percentage + 1;
-        END IF;
-        IF OLD.gender IS NOT NULL THEN
-            old_completion_percentage := old_completion_percentage + 1;
-        END IF;
-        IF OLD.date_of_birth IS NOT NULL THEN
-            old_completion_percentage := old_completion_percentage + 1;
-        END IF;
-        IF OLD.state IS NOT NULL THEN
-            old_completion_percentage := old_completion_percentage + 1;
-        END IF;
-        IF OLD.tags IS NOT NULL AND OLD.tags != '' THEN
-            old_completion_percentage := old_completion_percentage + 1;
-        END IF;
-        IF OLD.bio IS NOT NULL AND OLD.bio != '' THEN
-            old_completion_percentage := old_completion_percentage + 1;
-        END IF;
-        old_completion_percentage := (old_completion_percentage * 100 / 7);
-        was_complete := old_completion_percentage = 100;
-    END IF;
-    
-    -- Award 50 points for first-time 100% completion (only if user has 0 points to avoid duplicates)
-    IF is_now_complete AND NOT was_complete AND current_points = 0 THEN
-        UPDATE profiles 
-        SET activity_points = 50 
-        WHERE id = NEW.id;
+    -- Try to create the trigger
+    BEGIN
+        CREATE TRIGGER on_auth_user_created
+            AFTER INSERT ON auth.users
+            FOR EACH ROW
+            EXECUTE FUNCTION handle_new_user();
         
-        -- Log the points award for debugging
-        RAISE NOTICE 'Awarded 50 points to user % for profile completion', NEW.id;
-    END IF;
-    
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+        RAISE NOTICE 'Successfully created trigger on auth.users';
+    EXCEPTION
+        WHEN insufficient_privilege THEN
+            RAISE NOTICE 'Cannot create trigger on auth.users due to permissions - profiles will be created manually';
+        WHEN OTHERS THEN
+            RAISE NOTICE 'Cannot create trigger on auth.users: % - profiles will be created manually', SQLERRM;
+    END;
+END $$;
 
-COMMENT ON FUNCTION update_profile_completion() IS 
-    'Trigger function to update profile completion status when profile is modified';
-
+-- Trigger for updating timestamps on profiles table
 DROP TRIGGER IF EXISTS update_profiles_updated_at ON profiles;
-DROP TRIGGER IF EXISTS trigger_update_profile_completion ON profiles;
+CREATE TRIGGER update_profiles_updated_at
+    BEFORE UPDATE ON profiles
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_profiles_updated_at 
-    BEFORE UPDATE ON profiles 
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-COMMENT ON TRIGGER update_profiles_updated_at ON profiles IS 
-    'Automatically updates updated_at timestamp when profile is modified';
-
--- Trigger 2: Update profile completion status
-CREATE TRIGGER trigger_update_profile_completion
-    BEFORE INSERT OR UPDATE ON profiles
-    FOR EACH ROW EXECUTE FUNCTION update_profile_completion();
-
--- Trigger 3: Award completion points (after update)
-DROP TRIGGER IF EXISTS trigger_award_completion_points ON profiles;
-CREATE TRIGGER trigger_award_completion_points
-    AFTER INSERT OR UPDATE ON profiles
-    FOR EACH ROW EXECUTE FUNCTION award_completion_points();
-
-COMMENT ON TRIGGER trigger_update_profile_completion ON profiles IS 
-    'Updates profile completion status when profile data changes';
-COMMENT ON TRIGGER trigger_award_completion_points ON profiles IS 
-    'Awards activity points when profile reaches 100% completion';
-
-
-CREATE OR REPLACE FUNCTION public.handle_new_user_manually(
+-- Manual function for creating profiles (fallback for when trigger doesn't work)
+CREATE OR REPLACE FUNCTION handle_new_user_manually(
     user_id UUID,
     user_email TEXT,
     display_name TEXT DEFAULT ''
 )
-RETURNS UUID AS $$
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
 DECLARE
-    default_username TEXT;
-    existing_profile UUID;
+    generated_username TEXT;
 BEGIN
     -- Check if profile already exists
-    SELECT id INTO existing_profile FROM profiles WHERE id = user_id;
-    
-    IF existing_profile IS NOT NULL THEN
-        RETURN existing_profile; -- Profile already exists
+    IF EXISTS (SELECT 1 FROM profiles WHERE id = user_id) THEN
+        RETURN;
     END IF;
     
-    -- Generate default username from email
-    default_username := generate_default_username(user_email);
+    -- Generate unique username
+    generated_username := generate_unique_username(user_email, display_name);
     
-    -- Insert new profile with default values
-    INSERT INTO public.profiles (
-        id, 
-        full_name, 
-        username, 
-        created_at, 
-        updated_at,
-        is_profile_complete
-    )
-    VALUES (
+    -- Insert the profile
+    INSERT INTO profiles (
+        id,
+        full_name,
+        username,
+        created_at,
+        updated_at
+    ) VALUES (
         user_id,
-        display_name,
-        default_username,
+        COALESCE(display_name, ''),
+        generated_username,
         NOW(),
-        NOW(),
-        FALSE
+        NOW()
     );
-    
-    RETURN user_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
-COMMENT ON FUNCTION public.handle_new_user_manually(UUID, TEXT, TEXT) IS 
-    'Manually creates a profile for a new user - call this from application code after signup';
-
-
-
-CREATE OR REPLACE VIEW public_profiles AS
-SELECT 
-    p.id,
-    p.username,
-    p.full_name,
-    p.gender,
-    p.state,
-    p.tags,
-    p.bio,
-    p.blog_count,
-    p.places_explored,
-    p.endorsements,
-    p.activity_points,
-    p.profile_image_url,
-    p.is_profile_complete,
-    p.created_at,
-    p.updated_at,
-    -- Calculate age from date_of_birth
-    CASE 
-        WHEN p.date_of_birth IS NOT NULL THEN 
-            DATE_PART('year', AGE(p.date_of_birth))::INTEGER
-        ELSE NULL 
-    END as age,
-    -- Calculate profile completion percentage
-    calculate_profile_completion(p.id) as completion_percentage,
-    -- Parse tags into an array (for JSON response)
-    CASE 
-        WHEN p.tags IS NOT NULL AND p.tags != '' THEN 
-            string_to_array(p.tags, ',')
-        ELSE ARRAY[]::TEXT[] 
-    END as tags_array
-FROM profiles p;
-
-COMMENT ON VIEW public_profiles IS 
-    'Public view of profiles with calculated fields like age and completion percentage';
-
--- ============================================================================
--- INITIAL DATA / SEEDS
--- ============================================================================
-
--- Add any initial data or seed data here if needed
--- For example, you might want to create default tags or categories
-
--- Example: Create a table for predefined interest tags (optional)
-CREATE TABLE IF NOT EXISTS interest_categories (
-    id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE,
-    description TEXT,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Ensure the sequence exists and is properly owned
-DO $$
+-- Function to calculate profile completion percentage
+CREATE OR REPLACE FUNCTION calculate_profile_completion(profile_record profiles)
+RETURNS INTEGER
+LANGUAGE plpgsql
+IMMUTABLE
+AS $$
+DECLARE
+    completed_fields INTEGER := 0;
+    total_fields INTEGER := 7;
 BEGIN
-    -- Make sure the sequence is owned by the correct column
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'interest_categories') THEN
-        ALTER SEQUENCE IF EXISTS interest_categories_id_seq OWNED BY interest_categories.id;
+    -- Count completed fields
+    IF profile_record.full_name IS NOT NULL AND trim(profile_record.full_name) != '' THEN
+        completed_fields := completed_fields + 1;
     END IF;
-END $$;
+    
+    IF profile_record.username IS NOT NULL AND trim(profile_record.username) != '' THEN
+        completed_fields := completed_fields + 1;
+    END IF;
+    
+    IF profile_record.gender IS NOT NULL THEN
+        completed_fields := completed_fields + 1;
+    END IF;
+    
+    IF profile_record.date_of_birth IS NOT NULL THEN
+        completed_fields := completed_fields + 1;
+    END IF;
+    
+    IF profile_record.state IS NOT NULL THEN
+        completed_fields := completed_fields + 1;
+    END IF;
+    
+    IF profile_record.tags IS NOT NULL AND trim(profile_record.tags) != '' THEN
+        completed_fields := completed_fields + 1;
+    END IF;
+    
+    IF profile_record.bio IS NOT NULL AND trim(profile_record.bio) != '' THEN
+        completed_fields := completed_fields + 1;
+    END IF;
+    
+    RETURN ROUND((completed_fields::NUMERIC / total_fields::NUMERIC) * 100);
+END;
+$$;
 
-COMMENT ON TABLE interest_categories IS 
-    'Predefined categories for user interests/tags';
-
--- Insert some default interest categories (safe to run multiple times)
-DO $$
-BEGIN
-    -- Only insert if the table is empty or specific records don't exist
-    INSERT INTO interest_categories (name, description) VALUES
-        ('Art & Culture', 'Traditional and contemporary arts, cultural practices'),
-        ('History', 'Historical sites, monuments, and heritage'),
-        ('Music & Dance', 'Classical and folk music, traditional dances'),
-        ('Architecture', 'Temple architecture, forts, palaces'),
-        ('Festivals', 'Religious and cultural festivals'),
-        ('Cuisine', 'Traditional foods and cooking methods'),
-        ('Crafts', 'Handicrafts, textiles, pottery'),
-        ('Literature', 'Classical texts, poetry, storytelling'),
-        ('Philosophy', 'Ancient wisdom, spiritual practices'),
-        ('Nature & Environment', 'Sacred groves, natural heritage sites')
-    ON CONFLICT (name) DO NOTHING;
-EXCEPTION WHEN OTHERS THEN
-    -- Table might not exist yet, continue
-    NULL;
-END $$;
-
--- ============================================================================
--- GRANTS AND PERMISSIONS
--- ============================================================================
-
--- Grant necessary permissions to authenticated users (safe to run multiple times)
-DO $$
-BEGIN
-    -- Grant permissions to authenticated users
-    BEGIN
-        GRANT USAGE ON SCHEMA public TO authenticated;
-    EXCEPTION WHEN OTHERS THEN
-        -- Role might not exist yet, continue
-        NULL;
-    END;
-    
-    BEGIN
-        GRANT ALL ON profiles TO authenticated;
-    EXCEPTION WHEN OTHERS THEN
-        NULL;
-    END;
-    
-    BEGIN
-        GRANT SELECT ON interest_categories TO authenticated;
-    EXCEPTION WHEN OTHERS THEN
-        NULL;
-    END;
-    
-    BEGIN
-        GRANT SELECT ON public_profiles TO authenticated;
-    EXCEPTION WHEN OTHERS THEN
-        NULL;
-    END;
-    
-    -- Grant permissions to anonymous users
-    BEGIN
-        GRANT USAGE ON SCHEMA public TO anon;
-    EXCEPTION WHEN OTHERS THEN
-        NULL;
-    END;
-    
-    BEGIN
-        GRANT SELECT ON profiles TO anon;
-    EXCEPTION WHEN OTHERS THEN
-        NULL;
-    END;
-    
-    BEGIN
-        GRANT SELECT ON public_profiles TO anon;
-    EXCEPTION WHEN OTHERS THEN
-        NULL;
-    END;
-    
-    BEGIN
-        GRANT SELECT ON interest_categories TO anon;
-    EXCEPTION WHEN OTHERS THEN
-        NULL;
-    END;
-END $$;
-
--- ============================================================================
--- UTILITY FUNCTIONS FOR MAINTENANCE
--- ============================================================================
-
--- Function to clean up orphaned profiles (profiles without corresponding auth users)
-CREATE OR REPLACE FUNCTION cleanup_orphaned_profiles()
-RETURNS INTEGER AS $$
+-- Function to update profile completion status and award points
+CREATE OR REPLACE FUNCTION update_profile_completion()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
 DECLARE
-    deleted_count INTEGER;
+    completion_percentage INTEGER;
+    was_complete BOOLEAN;
+    is_now_complete BOOLEAN;
 BEGIN
-    DELETE FROM profiles 
-    WHERE id NOT IN (SELECT id FROM auth.users);
+    -- Calculate current completion percentage
+    completion_percentage := calculate_profile_completion(NEW);
+    is_now_complete := (completion_percentage = 100);
     
-    GET DIAGNOSTICS deleted_count = ROW_COUNT;
-    RETURN deleted_count;
+    -- Check if profile was previously complete
+    was_complete := COALESCE(OLD.is_profile_complete, FALSE);
+    
+    -- Update completion status
+    NEW.is_profile_complete := is_now_complete;
+    
+    -- Award 50 points if profile just became complete (wasn't complete before)
+    IF is_now_complete AND NOT was_complete THEN
+        NEW.activity_points := COALESCE(NEW.activity_points, 0) + 50;
+        RAISE NOTICE 'Profile completed! Awarded 50 points to user %', NEW.id;
+    END IF;
+    
+    RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
-COMMENT ON FUNCTION cleanup_orphaned_profiles() IS 
-    'Utility function to clean up profiles that no longer have corresponding auth users';
-
--- Function to increment blog count
-CREATE OR REPLACE FUNCTION increment_blog_count(user_id UUID)
-RETURNS VOID AS $$
-BEGIN
-    UPDATE profiles 
-    SET blog_count = blog_count + 1, updated_at = NOW()
-    WHERE id = user_id;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Function to increment places explored
-CREATE OR REPLACE FUNCTION increment_places_explored(user_id UUID)
-RETURNS VOID AS $$
-BEGIN
-    UPDATE profiles 
-    SET places_explored = places_explored + 1, updated_at = NOW()
-    WHERE id = user_id;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Function to increment endorsements
-CREATE OR REPLACE FUNCTION increment_endorsements(user_id UUID)
-RETURNS VOID AS $$
-BEGIN
-    UPDATE profiles 
-    SET endorsements = endorsements + 1, updated_at = NOW()
-    WHERE id = user_id;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Function to add activity points
-CREATE OR REPLACE FUNCTION add_activity_points(user_id UUID, points_to_add INTEGER)
-RETURNS VOID AS $$
-BEGIN
-    UPDATE profiles 
-    SET activity_points = activity_points + points_to_add, updated_at = NOW()
-    WHERE id = user_id;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Function to manually award completion points (call this to fix missing points)
-CREATE OR REPLACE FUNCTION award_completion_bonus(user_id UUID)
-RETURNS BOOLEAN AS $$
+-- Function to award completion points (alternative approach for manual calls)
+CREATE OR REPLACE FUNCTION award_completion_points()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
 DECLARE
-    completion_percent INTEGER;
-    current_points INTEGER;
-    profile_complete BOOLEAN;
+    completion_percentage INTEGER;
+    was_complete BOOLEAN;
+    is_now_complete BOOLEAN;
 BEGIN
-    -- Get current profile status
-    SELECT 
-        calculate_profile_completion(id),
-        activity_points,
-        is_profile_complete
-    INTO completion_percent, current_points, profile_complete
-    FROM profiles 
-    WHERE id = user_id;
+    -- Only run after the main completion update
+    completion_percentage := calculate_profile_completion(NEW);
+    is_now_complete := (completion_percentage = 100);
+    was_complete := COALESCE(OLD.is_profile_complete, FALSE);
     
-    -- If profile is 100% complete but user has 0 points, award them
-    IF completion_percent = 100 AND current_points = 0 THEN
+    -- Award points if just completed
+    IF is_now_complete AND NOT was_complete THEN
         UPDATE profiles 
-        SET activity_points = 50, updated_at = NOW()
-        WHERE id = user_id;
+        SET activity_points = COALESCE(activity_points, 0) + 50
+        WHERE id = NEW.id;
         
-        RAISE NOTICE 'Awarded 50 completion points to user %', user_id;
-        RETURN TRUE;
+        RAISE NOTICE 'Completion bonus: Added 50 points to user %', NEW.id;
     END IF;
     
-    RETURN FALSE;
+    RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
--- Add comments for the activity metric functions
-COMMENT ON FUNCTION increment_blog_count(UUID) IS 'Increments the blog count for a user';
-COMMENT ON FUNCTION increment_places_explored(UUID) IS 'Increments the places explored count for a user';
-COMMENT ON FUNCTION increment_endorsements(UUID) IS 'Increments the endorsements count for a user';
-COMMENT ON FUNCTION add_activity_points(UUID, INTEGER) IS 'Adds activity points to a user profile';
+-- Create triggers for profile completion
+DROP TRIGGER IF EXISTS trigger_update_profile_completion ON profiles;
+CREATE TRIGGER trigger_update_profile_completion
+    BEFORE UPDATE ON profiles
+    FOR EACH ROW
+    EXECUTE FUNCTION update_profile_completion();
 
--- ============================================================================
--- SCHEMA VERSION TRACKING
--- ============================================================================
-
--- Create a simple version tracking table
-CREATE TABLE IF NOT EXISTS schema_versions (
-    version TEXT PRIMARY KEY,
-    applied_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    description TEXT
-);
-
--- Insert current version (safe to run multiple times)
-DO $$
+-- RPC Functions for incrementing activity metrics
+CREATE OR REPLACE FUNCTION increment_blog_count(user_id UUID)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
 BEGIN
-    INSERT INTO schema_versions (version, description) VALUES 
-        ('1.0.0', 'Initial Arvaya database schema with profiles, RLS policies, and triggers'),
-        ('1.1.0', 'Added activity metrics columns: blog_count, places_explored, endorsements, activity_points')
-    ON CONFLICT (version) DO NOTHING;
-EXCEPTION WHEN OTHERS THEN
-    -- Table might not exist yet, continue
-    NULL;
-END $$;
-
--- ============================================================================
--- END OF SCHEMA
--- ============================================================================
-
--- Final message
-DO $$
-DECLARE
-    profile_count INTEGER;
-    version_count INTEGER;
-BEGIN
-    -- Get some stats
-    SELECT COUNT(*) INTO profile_count FROM profiles WHERE profiles.id IS NOT NULL;
-    SELECT COUNT(*) INTO version_count FROM schema_versions WHERE schema_versions.version IS NOT NULL;
+    UPDATE profiles 
+    SET blog_count = blog_count + 1,
+        updated_at = NOW()
+    WHERE id = user_id;
     
-    RAISE NOTICE '============================================================================';
-    RAISE NOTICE 'ARVAYA DATABASE SCHEMA SUCCESSFULLY APPLIED!';
-    RAISE NOTICE '============================================================================';
-    RAISE NOTICE 'Schema version: 1.1.0 (with activity metrics)';
-    RAISE NOTICE 'Current profiles in database: %', profile_count;
-    RAISE NOTICE 'Schema versions tracked: %', version_count;
-    RAISE NOTICE '';
-    RAISE NOTICE 'Features included:';
-    RAISE NOTICE '  ✓ Profiles table with activity metrics';
-    RAISE NOTICE '  ✓ Row Level Security policies';
-    RAISE NOTICE '  ✓ Automatic username generation';
-    RAISE NOTICE '  ✓ Profile completion tracking';
-    RAISE NOTICE '  ✓ Activity increment functions';
-    RAISE NOTICE '  ✓ Public profile showcase';
-    RAISE NOTICE '  ✓ Interest categories';
-    RAISE NOTICE '  ✓ Proper indexes for performance';
-    RAISE NOTICE '';
-    RAISE NOTICE 'This schema is idempotent and safe to run multiple times.';
-    RAISE NOTICE '============================================================================';
-EXCEPTION WHEN OTHERS THEN
-    RAISE NOTICE 'Schema applied successfully! Some stats unavailable.';
-END $$;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Profile not found for user %', user_id;
+    END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION increment_places_explored(user_id UUID)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    UPDATE profiles 
+    SET places_explored = places_explored + 1,
+        updated_at = NOW()
+    WHERE id = user_id;
+    
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Profile not found for user %', user_id;
+    END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION increment_endorsements(user_id UUID)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    UPDATE profiles 
+    SET endorsements = endorsements + 1,
+        updated_at = NOW()
+    WHERE id = user_id;
+    
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Profile not found for user %', user_id;
+    END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION add_activity_points(user_id UUID, points_to_add INTEGER)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    UPDATE profiles 
+    SET activity_points = activity_points + points_to_add,
+        updated_at = NOW()
+    WHERE id = user_id;
+    
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Profile not found for user %', user_id;
+    END IF;
+END;
+$$;
+
+-- Grant necessary permissions
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT ALL ON profiles TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION generate_unique_username(TEXT, TEXT) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION handle_new_user_manually(UUID, TEXT, TEXT) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION calculate_profile_completion(profiles) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION increment_blog_count(UUID) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION increment_places_explored(UUID) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION increment_endorsements(UUID) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION add_activity_points(UUID, INTEGER) TO anon, authenticated;

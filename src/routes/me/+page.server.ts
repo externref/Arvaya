@@ -36,10 +36,26 @@ export const load = async ({ locals: { supabase, safeGetSession } }) => {
 			profile = data;
 			// Calculate completion percentage
 			completionPercentage = calculateProfileCompletion(data);
+		} else if (error && error.code === 'PGRST116') {
+			// Profile doesn't exist, create it
+			const { error: createError } = await supabase
+				.rpc('handle_new_user_manually', {
+					user_id: user.id,
+					user_email: user.email || '',
+					display_name: user.user_metadata?.full_name || ''
+				});
+
+			if (!createError) {
+				// Fetch the newly created profile
+				const { data: newProfile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+				if (newProfile) {
+					profile = newProfile;
+					completionPercentage = calculateProfileCompletion(newProfile);
+				}
+			}
 		}
 	} catch (err) {
-		// Profile might not exist yet, that's okay
-		console.log('Profile not found, will create new one');
+		console.log('Profile handling error:', err);
 	}
 
 	return {
