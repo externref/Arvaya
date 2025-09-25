@@ -26,20 +26,25 @@ export function generateAvatarDataUrl(seed: string): string {
 
 /**
  * Create an avatar component props object
- * @param user - User object with username, full_name, or id
+ * @param user - User object with username, full_name, id, and optional profile_image_url
  * @param size - Size class for the avatar (default: 'h-24 w-24')
  * @returns Object with src and alt properties
  */
 export function createAvatarProps(
-	user: { username?: string; full_name?: string; id?: string; email?: string },
+	user: { username?: string; full_name?: string; id?: string; email?: string; profile_image_url?: string },
 	size: string = 'h-24 w-24'
 ) {
-	// Use username as primary seed, fallback to email or id
-	const seed = user.username || user.email || user.id || 'default';
 	const displayName = user.full_name || user.username || 'User';
 	
+	// Use custom profile image if available, otherwise generate avatar
+	const src = user.profile_image_url || (() => {
+		// Use username as primary seed, fallback to email or id
+		const seed = user.username || user.email || user.id || 'default';
+		return generateAvatarDataUrl(seed);
+	})();
+	
 	return {
-		src: generateAvatarDataUrl(seed),
+		src,
 		alt: `${displayName}'s avatar`,
 		class: `${size} rounded-full object-cover border-2 border-border shadow-lg`
 	};

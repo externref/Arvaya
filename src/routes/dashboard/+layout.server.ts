@@ -13,7 +13,7 @@ export const load = async ({ locals: { supabase, safeGetSession } }) => {
 	if (user) {
 		const { data } = await supabase
 			.from('profiles')
-			.select('username, full_name')
+			.select('username, full_name, profile_image_url')
 			.eq('id', user.id)
 			.single();
 		profile = data;

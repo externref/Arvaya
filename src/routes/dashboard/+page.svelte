@@ -12,11 +12,73 @@
 		Globe,
 		PenTool,
 		UserCog,
-		User
+		User,
+		Search
 	} from 'lucide-svelte';
+	import { Input } from '$lib/components/ui/input';
+	import { Avatar } from '$lib/components/ui/avatar';
 
 	let { data } = $props();
 	let { session, user, profile } = $derived(data);
+
+	// User search functionality
+	type UserResult = {
+		username: string;
+		full_name?: string;
+		// add other properties if needed
+	};
+
+	let searchQuery = $state('');
+	let searchResults = $state<UserResult[]>([]);
+	let showSearchResults = $state(false);
+	let isSearching = $state(false);
+
+	async function searchUsers() {
+		if (!searchQuery.trim()) {
+			searchResults = [];
+			showSearchResults = false;
+			return;
+		}
+
+		isSearching = true;
+		try {
+			const response = await fetch(`/api/search-users?q=${encodeURIComponent(searchQuery.trim())}`);
+			const result = await response.json();
+			
+			if (response.ok) {
+				searchResults = result.users || [];
+				showSearchResults = true;
+			} else {
+				console.error('Search failed:', result.error);
+				searchResults = [];
+				showSearchResults = false;
+			}
+		} catch (error) {
+			console.error('Search error:', error);
+			searchResults = [];
+			showSearchResults = false;
+		} finally {
+			isSearching = false;
+		}
+	}
+
+	// Debounce search function
+	let searchTimeout: ReturnType<typeof setTimeout>;
+	function handleSearchInput(event: Event) {
+		const target = event.target as HTMLInputElement;
+		searchQuery = target.value;
+		
+		clearTimeout(searchTimeout);
+		searchTimeout = setTimeout(() => {
+			searchUsers();
+		}, 300); // 300ms debounce
+	}
+
+	function hideSearchResults() {
+		setTimeout(() => {
+			showSearchResults = false;
+		}, 200); // Small delay to allow clicking on results
+	}
 </script>
 
 <svelte:head>
@@ -31,23 +93,76 @@
 	<div class="container mx-auto max-w-7xl px-4 py-8">
 		<!-- Welcome Header -->
 		<div class="mb-8">
-			<h1 class="mb-2 text-3xl font-bold text-foreground md:text-4xl">
-				Welcome back, {user?.user_metadata?.full_name || 'Explorer'}! 👋
-			</h1>
-			<p class="text-lg text-muted-foreground">
-				Continue your journey through India's rich cultural heritage
-			</p>
-			{#if profile?.username}
-				<div class="mt-4">
-					<a
-						href="/profile/{profile.username}"
-						class="inline-flex items-center gap-2 text-sm text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300"
-					>
-						<User class="h-4 w-4" />
-						View My Public Profile
-					</a>
+			<div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+				<!-- Welcome Text -->
+				<div class="flex-1">
+					<h1 class="mb-2 text-3xl font-bold text-foreground md:text-4xl">
+						Welcome back, {user?.user_metadata?.full_name || 'Explorer'}! 👋
+					</h1>
+					<p class="text-lg text-muted-foreground">
+						Continue your journey through India's rich cultural heritage
+					</p>
+					{#if profile?.username}
+						<div class="mt-4">
+							<a
+								href="/profile/{profile.username}"
+								class="inline-flex items-center gap-2 text-sm text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300"
+							>
+								<User class="h-4 w-4" />
+								View My Public Profile
+							</a>
+						</div>
+					{/if}
 				</div>
-			{/if}
+
+				<!-- User Search -->
+				<div class="relative w-full max-w-md lg:w-80">
+					<div class="relative">
+						<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+						<Input
+							type="text"
+							placeholder="Search users by username..."
+							value={searchQuery}
+							oninput={handleSearchInput}
+							onblur={hideSearchResults}
+							class="pl-10 pr-4"
+						/>
+						{#if isSearching}
+							<div class="absolute right-3 top-1/2 -translate-y-1/2">
+								<div class="h-4 w-4 animate-spin rounded-full border-2 border-muted border-t-foreground"></div>
+							</div>
+						{/if}
+					</div>
+
+					<!-- Search Results Dropdown -->
+					{#if showSearchResults && searchResults.length > 0}
+						<div class="absolute top-full left-0 right-0 z-50 mt-1 max-h-80 overflow-y-auto rounded-md border bg-popover p-1 shadow-md">
+							{#each searchResults as userResult}
+								<a
+									href="/profile/{(userResult).username}"
+									class="flex items-center gap-3 rounded-sm px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+									onmousedown={(e) => e.preventDefault()}
+								>
+									<Avatar 
+										user={userResult}
+										size="h-8 w-8"
+									/>
+									<div class="flex-1 min-w-0">
+										<div class="font-medium truncate">@{userResult.username}</div>
+										{#if userResult.full_name}
+											<div class="text-xs text-muted-foreground truncate">{userResult.full_name}</div>
+										{/if}
+									</div>
+								</a>
+							{/each}
+						</div>
+					{:else if showSearchResults && searchQuery.trim() && !isSearching}
+						<div class="absolute top-full left-0 right-0 z-50 mt-1 rounded-md border bg-popover p-3 shadow-md">
+							<p class="text-sm text-muted-foreground text-center">No users found matching "{searchQuery}"</p>
+						</div>
+					{/if}
+				</div>
+			</div>
 		</div>
 
 		<!-- Quick Options -->
@@ -78,7 +193,7 @@
 						</div>
 						<div>
 							<h3 class="mb-0.5 text-base font-semibold">Discover</h3>
-							<p class="text-xs text-muted-foreground">Explore new cultures and traditions</p>
+							<p class="text-xs text-muted-foreground">Explore new people, cultures and traditions</p>
 						</div>
 					</div>
 				</Card.Content>

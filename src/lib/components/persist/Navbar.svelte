@@ -46,7 +46,12 @@
 				{#if session && user}
 					<!-- Authenticated user menu -->
 					<Avatar 
-						user={profile || user}
+						user={{
+							...user,
+							username: profile?.username || user.user_metadata?.username,
+							full_name: profile?.full_name || user.user_metadata?.full_name,
+							profile_image_url: profile?.profile_image_url
+						}}
 						size="h-8 w-8"
 					/>
 					<span class="text-sm text-muted-foreground hidden lg:inline">
@@ -101,7 +106,12 @@
 						<!-- Mobile authenticated user menu -->
 						<div class="px-3 py-2 flex items-center gap-3">
 							<Avatar 
-								user={profile || user}
+								user={{
+									...user,
+									username: profile?.username || user.user_metadata?.username,
+									full_name: profile?.full_name || user.user_metadata?.full_name,
+									profile_image_url: profile?.profile_image_url
+								}}
 								size="h-8 w-8"
 							/>
 							<div>

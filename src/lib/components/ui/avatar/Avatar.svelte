@@ -2,7 +2,7 @@
 	import { createAvatarProps } from '$lib/utils/avatar';
 	
 	interface Props {
-		user: { username?: string; full_name?: string; id?: string; email?: string };
+		user: { username?: string; full_name?: string; id?: string; email?: string; profile_image_url?: string };
 		size?: string;
 		class?: string;
 	}

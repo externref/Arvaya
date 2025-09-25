@@ -5,7 +5,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Badge } from '$lib/components/ui/badge';
 	import { enhance } from '$app/forms';
-	import { User, Calendar, MapPin, Tag, FileText, X, Award, Star } from 'lucide-svelte';
+	import { User, Calendar, MapPin, Tag, FileText, X, Award, Star, Upload, Trash2 } from 'lucide-svelte';
 	import { Avatar } from '$lib/components/ui/avatar';
 
 	let { data, form } = $props();
@@ -14,6 +14,98 @@
 	// Calculate completion status and points to earn
 	const isFullyComplete = $derived(completionPercentage === 100);
 	const pointsToEarn = $derived(isFullyComplete ? 0 : 50);
+
+	// Profile picture upload state
+	let uploadStatus = $state('');
+	let isUploading = $state(false);
+	let uploadProgress = $state(0);
+
+	async function handleFileSelect(event: Event) {
+		const target = event.target as HTMLInputElement;
+		const file = target.files?.[0];
+		
+		if (!file) return;
+
+		// Validate file
+		if (file.size > 5 * 1024 * 1024) {
+			uploadStatus = 'Error: File size must be less than 5MB';
+			return;
+		}
+
+		if (!file.type.startsWith('image/')) {
+			uploadStatus = 'Error: Please select a valid image file';
+			return;
+		}
+
+		isUploading = true;
+		uploadStatus = 'Uploading...';
+		uploadProgress = 0;
+
+		try {
+			const formData = new FormData();
+			formData.append('file', file);
+
+			const response = await fetch('/api/upload-profile-picture', {
+				method: 'POST',
+				body: formData
+			});
+
+			const result = await response.json();
+
+			if (response.ok) {
+				uploadStatus = 'Upload successful!';
+				// Refresh the page to show the new profile picture
+				window.location.reload();
+			} else {
+				uploadStatus = `Error: ${result.error || 'Upload failed'}`;
+			}
+		} catch (error) {
+			uploadStatus = 'Error: Upload failed. Please try again.';
+			console.error('Upload error:', error);
+		} finally {
+			isUploading = false;
+			// Clear status after 3 seconds
+			setTimeout(() => {
+				uploadStatus = '';
+			}, 3000);
+		}
+
+		// Reset file input
+		target.value = '';
+	}
+
+	// Handle profile picture deletion
+	async function deleteProfilePicture() {
+		if (!profile?.profile_image_url) return;
+
+		isUploading = true;
+		uploadStatus = 'Deleting...';
+
+		try {
+			const response = await fetch('/api/upload-profile-picture', {
+				method: 'DELETE'
+			});
+
+			const result = await response.json();
+
+			if (response.ok) {
+				uploadStatus = 'Profile picture deleted successfully!';
+				// Refresh the page to show the updated avatar
+				window.location.reload();
+			} else {
+				uploadStatus = `Error: ${result.error || 'Delete failed'}`;
+			}
+		} catch (error) {
+			uploadStatus = 'Error: Delete failed. Please try again.';
+			console.error('Delete error:', error);
+		} finally {
+			isUploading = false;
+			// Clear status after 3 seconds
+			setTimeout(() => {
+				uploadStatus = '';
+			}, 3000);
+		}
+	}
 
 	// Indian states and union territories
 	const indianStates = [
@@ -99,25 +191,91 @@
 			</p>
 		</div>
 
-		<!-- Avatar Preview -->
+		<!-- Profile Picture Section -->
 		<Card.Root class="mb-8">
 			<Card.Header>
 				<Card.Title class="flex items-center gap-2">
 					<User class="h-5 w-5 text-orange-600" />
 					Profile Picture
 				</Card.Title>
-				<Card.Description>Your unique avatar generated from your username</Card.Description>
+				<Card.Description>
+					{#if profile?.profile_image_url}
+						Your custom profile picture
+					{:else}
+						Auto-generated avatar or upload a custom picture
+					{/if}
+				</Card.Description>
 			</Card.Header>
-			<Card.Content class="flex items-center gap-4">
-				<Avatar 
-					user={profile || user}
-					size="h-20 w-20"
-				/>
-				<div class="space-y-1">
-					<p class="text-sm font-medium">Auto-generated Avatar</p>
+			<Card.Content class="space-y-4">
+				<!-- Current Profile Picture -->
+				<div class="flex items-center gap-4">
+					<Avatar 
+						user={profile || user}
+						size="h-20 w-20"
+					/>
+					<div class="space-y-2">
+						{#if profile?.profile_image_url}
+							<p class="text-sm font-medium">Custom Profile Picture</p>
+							<p class="text-xs text-muted-foreground">
+								Your uploaded profile picture is displayed across the site.
+							</p>
+						{:else}
+							<p class="text-sm font-medium">Auto-generated Avatar</p>
+							<p class="text-xs text-muted-foreground">
+								Upload a custom picture or keep the auto-generated avatar.
+							</p>
+						{/if}
+					</div>
+				</div>
+
+				<!-- Upload Section -->
+				<div class="space-y-3">
+					<div class="flex flex-wrap gap-2">
+						<!-- File Input (Hidden) -->
+						<input
+							type="file"
+							id="profilePicture"
+							accept="image/*"
+							class="hidden"
+							onchange={handleFileSelect}
+						/>
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							onclick={() => document.getElementById('profilePicture')?.click()}
+							disabled={isUploading}
+							class="flex items-center gap-2"
+						>
+							<Upload class="h-4 w-4" />
+							{isUploading ? 'Uploading...' : 'Choose Image'}
+						</Button>
+
+						{#if profile?.profile_image_url}
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								onclick={deleteProfilePicture}
+								disabled={isUploading}
+								class="flex items-center gap-2 text-red-600 hover:text-red-700"
+							>
+								<Trash2 class="h-4 w-4" />
+								Remove
+							</Button>
+						{/if}
+					</div>
+
+					<!-- Upload Status -->
+					{#if uploadStatus}
+						<div class="text-sm {uploadStatus.startsWith('Error') ? 'text-red-600' : uploadStatus.includes('successful') || uploadStatus.includes('Uploading') || uploadStatus.includes('Deleting') ? 'text-green-600' : 'text-blue-600'}">
+							{uploadStatus}
+						</div>
+					{/if}
+
+					<!-- Upload Guidelines -->
 					<p class="text-xs text-muted-foreground">
-						Your avatar is automatically generated based on your username. 
-						Change your username to get a different avatar design.
+						Upload a profile picture (max 5MB). Supported formats: JPG, PNG, GIF, WebP.
 					</p>
 				</div>
 			</Card.Content>
@@ -208,7 +366,7 @@
 									value={profile?.full_name || user?.user_metadata?.full_name || ''}
 									required
 								/>
-								{#if form?.errors?.fullName}
+								{#if form?.errors && 'fullName' in form.errors}
 									<p class="text-sm text-destructive">{form.errors.fullName}</p>
 								{/if}
 							</div>
