@@ -5,6 +5,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Badge } from '$lib/components/ui/badge';
 	import { enhance } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
 	import { User, Calendar, MapPin, Tag, FileText, X, Award, Star, Upload, Trash2 } from 'lucide-svelte';
 	import { Avatar } from '$lib/components/ui/avatar';
 
@@ -54,8 +55,8 @@
 
 			if (response.ok) {
 				uploadStatus = 'Upload successful!';
-				// Refresh the page to show the new profile picture
-				window.location.reload();
+				// Invalidate all data to refresh profile picture everywhere
+				await invalidateAll();
 			} else {
 				uploadStatus = `Error: ${result.error || 'Upload failed'}`;
 			}
@@ -90,8 +91,8 @@
 
 			if (response.ok) {
 				uploadStatus = 'Profile picture deleted successfully!';
-				// Refresh the page to show the updated avatar
-				window.location.reload();
+				// Invalidate all data to refresh profile picture everywhere
+				await invalidateAll();
 			} else {
 				uploadStatus = `Error: ${result.error || 'Delete failed'}`;
 			}
@@ -210,7 +211,12 @@
 				<!-- Current Profile Picture -->
 				<div class="flex items-center gap-4">
 					<Avatar 
-						user={profile || user}
+						user={{
+							...user,
+							username: profile?.username || user.user_metadata?.username,
+							full_name: profile?.full_name || user.user_metadata?.full_name,
+							profile_image_url: profile?.profile_image_url
+						}}
 						size="h-20 w-20"
 					/>
 					<div class="space-y-2">
@@ -380,11 +386,18 @@
 									type="text"
 									placeholder="Choose a unique username"
 									value={profile?.username || ''}
+									oninput={(e) => {
+										const target = e.target as HTMLInputElement;
+										target.value = target.value.toLowerCase();
+									}}
 									required
 								/>
 								{#if form?.errors?.username}
 									<p class="text-sm text-destructive">{form.errors.username}</p>
 								{/if}
+								<p class="text-xs text-muted-foreground">
+									Username will be automatically converted to lowercase
+								</p>
 							</div>
 
 							<!-- Gender -->

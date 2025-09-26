@@ -76,7 +76,9 @@ export const actions = {
 
 		const formData = await request.formData();
 		const fullName = formData.get('fullName') as string;
-		const username = formData.get('username') as string;
+		const usernameRaw = formData.get('username') as string;
+		// Convert username to lowercase on the server side as well for consistency
+		const username = usernameRaw ? usernameRaw.toLowerCase().trim() : '';
 		const gender = formData.get('gender') as string;
 		const dateOfBirth = formData.get('dateOfBirth') as string;
 		const state = formData.get('state') as string;

@@ -504,9 +504,83 @@ BEGIN
 END;
 $$;
 
+-- Endorsements table to track user-to-user endorsements
+CREATE TABLE IF NOT EXISTS endorsements (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    endorser_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+    endorsed_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    -- Prevent self-endorsement and duplicate endorsements
+    CONSTRAINT no_self_endorsement CHECK (endorser_id != endorsed_id),
+    CONSTRAINT unique_endorsement UNIQUE (endorser_id, endorsed_id)
+);
+
+-- Create index for faster lookups
+CREATE INDEX IF NOT EXISTS idx_endorsements_endorser ON endorsements(endorser_id);
+CREATE INDEX IF NOT EXISTS idx_endorsements_endorsed ON endorsements(endorsed_id);
+
+-- RLS policies for endorsements
+ALTER TABLE endorsements ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist (safe to run multiple times)
+DROP POLICY IF EXISTS "Anyone can view endorsements" ON endorsements;
+DROP POLICY IF EXISTS "Users can create endorsements as themselves" ON endorsements;
+DROP POLICY IF EXISTS "Users can delete their own endorsements" ON endorsements;
+
+-- Users can view all endorsements
+CREATE POLICY "Anyone can view endorsements" ON endorsements
+    FOR SELECT USING (true);
+
+-- Users can only create endorsements as themselves
+CREATE POLICY "Users can create endorsements as themselves" ON endorsements
+    FOR INSERT WITH CHECK (auth.uid() = endorser_id);
+
+-- Users can delete their own endorsements
+CREATE POLICY "Users can delete their own endorsements" ON endorsements
+    FOR DELETE USING (auth.uid() = endorser_id);
+
+-- Function to handle endorsement creation with automatic counter update
+CREATE OR REPLACE FUNCTION handle_endorsement_creation()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Increment the endorsed user's endorsement count
+    UPDATE profiles 
+    SET endorsements = endorsements + 1, updated_at = NOW()
+    WHERE id = NEW.endorsed_id;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to handle endorsement deletion with automatic counter update
+CREATE OR REPLACE FUNCTION handle_endorsement_deletion()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Decrement the endorsed user's endorsement count
+    UPDATE profiles 
+    SET endorsements = GREATEST(0, endorsements - 1), updated_at = NOW()
+    WHERE id = OLD.endorsed_id;
+    
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Triggers to automatically update endorsement counts
+DROP TRIGGER IF EXISTS endorsement_creation_trigger ON endorsements;
+CREATE TRIGGER endorsement_creation_trigger
+    AFTER INSERT ON endorsements
+    FOR EACH ROW EXECUTE FUNCTION handle_endorsement_creation();
+
+DROP TRIGGER IF EXISTS endorsement_deletion_trigger ON endorsements;
+CREATE TRIGGER endorsement_deletion_trigger
+    AFTER DELETE ON endorsements
+    FOR EACH ROW EXECUTE FUNCTION handle_endorsement_deletion();
+
 -- Grant necessary permissions
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT ALL ON profiles TO anon, authenticated;
+GRANT ALL ON endorsements TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION generate_unique_username(TEXT, TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION handle_new_user_manually(UUID, TEXT, TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION calculate_profile_completion(profiles) TO anon, authenticated;
@@ -514,3 +588,5 @@ GRANT EXECUTE ON FUNCTION increment_blog_count(UUID) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION increment_places_explored(UUID) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION increment_endorsements(UUID) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION add_activity_points(UUID, INTEGER) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION handle_endorsement_creation() TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION handle_endorsement_deletion() TO anon, authenticated;

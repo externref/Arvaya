@@ -17,6 +17,8 @@
 	} from 'lucide-svelte';
 	import { page } from '$app/stores';
 	import { Avatar } from '$lib/components/ui/avatar';
+	import EndorsementButton from '$lib/components/EndorsementButton.svelte';
+	import EndorsementList from '$lib/components/EndorsementList.svelte';
 
 	let { data } = $props();
 	let { profile, isOwnProfile, currentUser } = $derived(data);
@@ -115,12 +117,21 @@
 						{/if}
 
 						<!-- Actions -->
-						<div class="flex gap-3 pt-2">
+						<div class="flex flex-wrap gap-3 pt-2">
 							{#if isOwnProfile}
 								<Button href="/me" variant="default" size="sm">
 									<Edit3 class="mr-2 h-4 w-4" />
 									Edit Profile
 								</Button>
+							{:else}
+								<!-- Endorsement Button (only for other users' profiles) -->
+								<EndorsementButton 
+									userId={profile.id}
+									username={profile.username}
+									fullName={profile.full_name}
+									initialEndorsementCount={profile.endorsements}
+									size="sm"
+								/>
 							{/if}
 							<Button variant="outline" size="sm" onclick={shareProfile}>
 								<Share2 class="mr-2 h-4 w-4" />
@@ -299,6 +310,15 @@
 						</div>
 					</Card.Content>
 				</Card.Root>
+
+				<!-- Endorsements List -->
+				{#if profile.endorsements && profile.endorsements > 0}
+					<EndorsementList 
+						userId={profile.id}
+						username={profile.username}
+						showTitle={true}
+					/>
+				{/if}
 
 				<!-- Quick Facts -->
 				{#if profile.gender || profile.age}

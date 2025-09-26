@@ -10,6 +10,18 @@
 	let { session, user, profile } = $derived($page.data);
 	let mobileMenuOpen = $state(false);
 
+
+
+	// Create merged user object with profile data
+	let mergedUser = $derived(user ? {
+		...user,
+		username: profile?.username || user.user_metadata?.username,
+		full_name: profile?.full_name || user.user_metadata?.full_name,
+		profile_image_url: profile?.profile_image_url
+	} : null);
+
+
+
 	function toggleMobileMenu() {
 		mobileMenuOpen = !mobileMenuOpen;
 	}
@@ -45,13 +57,9 @@
 			<div class="hidden md:flex items-center space-x-2">
 				{#if session && user}
 					<!-- Authenticated user menu -->
+
 					<Avatar 
-						user={{
-							...user,
-							username: profile?.username || user.user_metadata?.username,
-							full_name: profile?.full_name || user.user_metadata?.full_name,
-							profile_image_url: profile?.profile_image_url
-						}}
+						user={mergedUser}
 						size="h-8 w-8"
 					/>
 					<span class="text-sm text-muted-foreground hidden lg:inline">

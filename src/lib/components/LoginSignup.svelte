@@ -63,6 +63,10 @@
 	// Form state management
 	let isLoading = false;
 	let errorMessage = '';
+	let showForgotPassword = false;
+	let forgotPasswordEmail = '';
+	let forgotPasswordMessage = '';
+	let forgotPasswordError = '';
 
 	// Form handlers - these will be replaced by form actions
 	function handleLoginSubmit() {
@@ -79,6 +83,12 @@
 		isLoading = true;
 		errorMessage = '';
 		return true;
+	}
+
+	function handleForgotPasswordSubmit() {
+		isLoading = true;
+		forgotPasswordError = '';
+		forgotPasswordMessage = '';
 	}
 </script>
 
@@ -152,6 +162,17 @@
 									{isLoading ? 'Signing In...' : 'Sign In'}
 								</Button>
 							</form>
+							
+							<!-- Forgot Password Link -->
+							<div class="text-center">
+								<button
+									type="button"
+									class="text-sm text-blue-600 hover:text-blue-800 underline"
+									onclick={() => (showForgotPassword = true)}
+								>
+									Forgot your password?
+								</button>
+							</div>
 						</Card.Content>
 					</Card.Root>
 				</div>
@@ -278,5 +299,86 @@
 				</div>
 			</Tabs.Content>
 		</Tabs.Root>
+
+		<!-- Forgot Password Modal -->
+		{#if showForgotPassword}
+			<div
+				class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+				onclick={(e) => e.target === e.currentTarget && (showForgotPassword = false)}
+				transition:fade={{ duration: 200 }}
+			>
+				<div class="bg-background rounded-lg p-6 w-full max-w-md" transition:slide={{ duration: 300 }}>
+					<div class="mb-4">
+						<h3 class="text-lg font-semibold">Reset Password</h3>
+						<p class="text-sm text-muted-foreground">
+							Enter your email address and we'll send you a link to reset your password.
+						</p>
+					</div>
+
+					{#if forgotPasswordMessage}
+						<div class="mb-4 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-600">
+							{forgotPasswordMessage}
+						</div>
+					{/if}
+
+					{#if forgotPasswordError}
+						<div class="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+							{forgotPasswordError}
+						</div>
+					{/if}
+
+					<form
+						method="POST"
+						action="?/resetPassword"
+						use:enhance={() => {
+							handleForgotPasswordSubmit();
+							return async ({ result, update }) => {
+								isLoading = false;
+								if (result.type === 'success' && result.data?.success) {
+									// @ts-ignore
+									forgotPasswordMessage = result.data.message;
+									forgotPasswordError = '';
+									forgotPasswordEmail = '';
+								} else if (result.type === 'failure' && result.data?.error) {
+									// @ts-ignore
+									forgotPasswordError = result.data.error;
+									forgotPasswordMessage = '';
+								}
+								await update();
+							};
+						}}
+						class="space-y-4"
+					>
+						<div class="space-y-2">
+							<Label for="forgot-password-email">Email</Label>
+							<Input
+								id="forgot-password-email"
+								name="email"
+								type="email"
+								placeholder="Enter your email"
+								bind:value={forgotPasswordEmail}
+								disabled={isLoading}
+								required
+							/>
+						</div>
+
+						<div class="flex gap-2">
+							<Button
+								type="button"
+								variant="outline"
+								class="flex-1"
+								onclick={() => (showForgotPassword = false)}
+								disabled={isLoading}
+							>
+								Cancel
+							</Button>
+							<Button type="submit" class="flex-1" disabled={isLoading}>
+								{isLoading ? 'Sending...' : 'Send Reset Link'}
+							</Button>
+						</div>
+					</form>
+				</div>
+			</div>
+		{/if}
 	</div>
 {/if}

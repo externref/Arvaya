@@ -1,8 +1,14 @@
-import { error } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 
 export const load = async ({ params, locals: { supabase, safeGetSession } }) => {
 	const { username } = params;
 	const { session, user: currentUser } = await safeGetSession();
+
+	// If the URL contains mixed case, redirect to lowercase version
+	const lowercaseUsername = username?.trim().toLowerCase();
+	if (username && username !== lowercaseUsername) {
+		throw redirect(301, `/profile/${lowercaseUsername}`);
+	}
 
 	// Debug logging
 	console.log('Profile route accessed with username:', username);
@@ -14,11 +20,15 @@ export const load = async ({ params, locals: { supabase, safeGetSession } }) => 
 		throw error(404, 'Username not provided');
 	}
 
+	// Convert username to lowercase for database query (usernames are stored in lowercase)
+	const normalizedUsername = username.trim().toLowerCase();
+	console.log('Normalized username for query:', normalizedUsername);
+
 	// Fetch profile by username using public_profiles view (bypasses RLS issues)
 	let { data: profile, error: profileError } = await supabase
 		.from('public_profiles')
 		.select('*')
-		.eq('username', username)
+		.eq('username', normalizedUsername)
 		.single();
 
 	// Fallback: try direct profiles table if view doesn't work
@@ -26,7 +36,7 @@ export const load = async ({ params, locals: { supabase, safeGetSession } }) => 
 		const { data: fallbackProfile, error: fallbackError } = await supabase
 			.from('profiles')
 			.select('*')
-			.eq('username', username)
+			.eq('username', normalizedUsername)
 			.single();
 
 		if (fallbackProfile && !fallbackError) {

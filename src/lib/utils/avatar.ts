@@ -36,6 +36,8 @@ export function createAvatarProps(
 ) {
 	const displayName = user.full_name || user.username || 'User';
 	
+
+	
 	// Use custom profile image if available, otherwise generate avatar
 	const src = user.profile_image_url || (() => {
 		// Use username as primary seed, fallback to email or id

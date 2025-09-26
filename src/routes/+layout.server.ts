@@ -6,11 +6,12 @@ export const load: LayoutServerLoad = async ({ locals: { safeGetSession, supabas
 	// Get user profile data if logged in
 	let profile = null;
 	if (user) {
-		const { data } = await supabase
+		const { data, error } = await supabase
 			.from('profiles')
 			.select('username, full_name, profile_image_url')
 			.eq('id', user.id)
 			.single();
+		
 		profile = data;
 	}
 

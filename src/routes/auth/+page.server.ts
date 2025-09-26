@@ -75,6 +75,35 @@ export const actions = {
 		redirect(303, '/dashboard');
 	},
 
+	resetPassword: async ({ request, locals: { supabase }, url }) => {
+		const formData = await request.formData();
+		const email = formData.get('email') as string;
+
+		// Basic validation
+		if (!email) {
+			return fail(400, {
+				error: 'Email is required',
+				email
+			});
+		}
+
+		const { error } = await supabase.auth.resetPasswordForEmail(email, {
+			redirectTo: `${url.origin}/auth/reset-password`
+		});
+
+		if (error) {
+			return fail(400, {
+				error: error.message,
+				email
+			});
+		}
+
+		return {
+			success: true,
+			message: 'Password reset email sent! Check your inbox for the reset link.'
+		};
+	},
+
 	logout: async ({ locals: { supabase }, cookies }) => {
 		try {
 			await supabase.auth.signOut();
