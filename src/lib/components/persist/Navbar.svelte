@@ -29,6 +29,31 @@
 	function closeMobileMenu() {
 		mobileMenuOpen = false;
 	}
+
+	// Alternative logout function for mobile if form submission fails
+	async function handleLogout() {
+		try {
+			const response = await fetch('/auth?/logout', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/x-www-form-urlencoded',
+				},
+			});
+			
+			if (response.ok || response.redirected) {
+				// Logout successful, redirect to auth page
+				window.location.href = '/auth';
+			} else {
+				console.error('Logout failed:', response.status);
+				// Fallback: try to reload the page to clear session
+				window.location.reload();
+			}
+		} catch (error) {
+			console.error('Logout error:', error);
+			// Fallback: try to reload the page
+			window.location.reload();
+		}
+	}
 </script>
 
 <nav class="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -71,7 +96,15 @@
 						</Button>
 					{/if}
 					<Button href="/dashboard" variant="ghost" size="sm" class="h-9 px-3">Dashboard</Button>
-					<form method="POST" action="/auth?/logout" use:enhance>
+					<form 
+						method="POST" 
+						action="/auth?/logout" 
+						use:enhance={() => {
+							return async ({ result, update }) => {
+								await update();
+							};
+						}}
+					>
 						<Button type="submit" variant="outline" size="sm" class="h-9 px-3">Sign Out</Button>
 					</form>
 				{:else}
@@ -150,17 +183,42 @@
 							Dashboard
 						</a>
 						
-						<form method="POST" action="/auth?/logout" use:enhance class="px-3 py-2">
-							<Button 
-								type="submit" 
-								variant="outline" 
-								size="sm" 
-								class="w-full justify-start h-10"
-								onclick={closeMobileMenu}
+						<div class="px-3 py-2 space-y-2">
+							<!-- Primary logout form -->
+							<form 
+								method="POST" 
+								action="/auth?/logout" 
+								use:enhance={() => {
+									return async ({ result, update }) => {
+										closeMobileMenu();
+										await update();
+									};
+								}}
 							>
-								Sign Out
+								<Button 
+									type="submit" 
+									variant="outline" 
+									size="sm" 
+									class="w-full justify-start h-10"
+								>
+									Sign Out
+								</Button>
+							</form>
+							
+							<!-- Fallback logout button for mobile issues -->
+							<Button 
+								type="button"
+								variant="ghost" 
+								size="sm" 
+								class="w-full justify-start h-8 text-xs text-muted-foreground"
+								onclick={() => {
+									closeMobileMenu();
+									handleLogout();
+								}}
+							>
+								Logout (Alternative)
 							</Button>
-						</form>
+						</div>
 					{:else}
 						<!-- Mobile guest user actions -->
 						<div class="px-3 py-2">
